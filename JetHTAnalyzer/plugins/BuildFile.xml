@@ -1,0 +1,18 @@
+<use name="CommonTools/Utils"/>
+<use name="DataFormats/TrackReco"/>
+<use name="DataFormats/VertexReco"/>
+<use name="FWCore/Framework"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/PluginManager"/>
+<use name="PhysicsTools/UtilAlgos"/>
+<use name="RecoVertex/AdaptiveVertexFit"/>
+<use name="TrackingTools/Records"/>
+<use name="TrackingTools/TransientTrack"/>
+<use name="clhep"/>
+<use name="root"/>
+<use name="rootmath"/>
+<use name="rootminuit"/>
+<use name="rootrflx"/>
+<library name="TkAlToolsJetHTAnalyzerPlugin" file="*.cc">
+  <Flags EDM_PLUGIN="1"/>
+</library>
