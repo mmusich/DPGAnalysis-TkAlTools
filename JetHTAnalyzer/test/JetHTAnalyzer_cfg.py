@@ -5,7 +5,14 @@ here doing refit of tracks and vertices using latest alignment
 
 import FWCore.ParameterSet.Config as cms
 process = cms.Process("JetHTAnalyzer")
+
+###################################################################
+# Messages
+###################################################################
 process.load("FWCore.MessageService.MessageLogger_cfi")
+process.MessageLogger.destinations = ['cout', 'cerr']
+process.MessageLogger.cerr.FwkReport.reportEvery = 1000
+
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10000) )
 
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff")
@@ -15,7 +22,8 @@ process.load('Configuration.StandardSequences.Services_cff')
 process.load('TrackingTools.TransientTrack.TransientTrackBuilder_cfi')
 
 process.source = cms.Source("PoolSource",
-                            fileNames = cms.untracked.vstring('file:/tmp/musich/CMSSW_10_4_0/src/Alignment/JetHTAnalyzer/test/TkAlMinBias.root')
+                            #fileNames = cms.untracked.vstring('file:/tmp/musich/CMSSW_10_4_0/src/Alignment/JetHTAnalyzer/test/TkAlMinBias.root')
+                            fileNames = cms.untracked.vstring('root://xrootd-cms.infn.it//store/user/jviinika/TkAlJetHTReconstruction_Run2017ABCDEF-v1_10keventPerIov/TrackAlignment_jetHTreconstruction/crab_TkAlJetHTReconstruction_Run2017ABCDEF-v1_10keventPerIov/190305_003651/0000/TkAlJetHT_1.root')
                             )
 
 process.load("RecoVertex.BeamSpotProducer.BeamSpot_cfi")

@@ -1,0 +1,17 @@
+<use name="DataFormats/Common"/>
+<use name="FWCore/Utilities"/>
+<use name="FWCore/Framework"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/ServiceRegistry"/>
+<use name="FWCore/Services"/>
+<use name="DataFormats/VertexReco"/>
+<use name="DataFormats/BeamSpot"/>
+<use name="PhysicsTools/UtilAlgos"/>
+<use name="PhysicsTools/Utilities"/>
+<use name="roottmva"/>
+<use name="roofit"/>
+<use name="rootrflx"/>
+<use name="roostats"/>
+<export>
+  <lib name="1"/>
+</export>

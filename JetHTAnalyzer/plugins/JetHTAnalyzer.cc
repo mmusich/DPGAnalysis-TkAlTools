@@ -42,6 +42,7 @@
 #include "RecoVertex/VertexTools/interface/VertexDistance3D.h"
 #include "TrackingTools/Records/interface/TransientTrackRecord.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
+#include "TkAlTools/JetHTAnalyzer/interface/SmartSelectionMonitor.h"
 
 // ROOT includes
 #include "TRandom.h"
@@ -92,6 +93,8 @@ class JetHTAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
       TH1F* h_probeDz;
       TH1F* h_probeDxyErr;
       TH1F* h_probeDzErr;   
+
+      SmartSelectionMonitor mon;
 
 };
 
@@ -155,11 +158,12 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   for (reco::VertexCollection::const_iterator pvIt = pvtx.begin(); pvIt!=pvtx.end(); pvIt++){
     reco::Vertex iPV = *pvIt;
     counter++;
+
     if (iPV.isFake()) continue;
     reco::Vertex::trackRef_iterator trki;
 
     const math::XYZPoint pos_(iPV.x(),iPV.y(),iPV.z());
-
+    
     // vertex selection as in bs code
     if ( iPV.ndof() < minVtxNdf_ || (iPV.ndof()+3.)/iPV.tracksSize()< 2*minVtxWgt_ )  continue;
 
@@ -198,8 +202,29 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       h_probeDxyErr->Fill(dxy_err);
       h_probeDzErr->Fill(dz_err); 
 
-    }
-  }
+      mon.fillHisto("dxy","all",dxyRes,1.);
+      mon.fillHisto("dz","all",dzRes,1.);
+      mon.fillHisto("dxyerr","all",dxy_err,1.);
+      mon.fillHisto("dzerr","all",dz_err,1.);
+
+      mon.fillProfile("dxyErrVsPt","all",trackpt,dxy_err,1.);
+      mon.fillProfile("dzErrVsPt" ,"all",trackpt,dz_err,1.);
+
+      if(std::abs(tracketa)<1.){
+	mon.fillHisto("dxy","central",dxyRes,1.);
+	mon.fillHisto("dz","central",dzRes,1.);
+	mon.fillHisto("dxyerr","central",dxy_err,1.);
+	mon.fillHisto("dzerr","central",dz_err,1.);
+
+	mon.fillProfile("dxyErrVsPt","central",trackpt,dxy_err,1.);
+	mon.fillProfile("dzErrVsPt" ,"central",trackpt,dz_err,1.);
+      }     
+      
+    }// loop on tracks in vertex
+  } // loop on vertices
+
+  mon.fillHisto("nvtx","all",counter,1.);
+
 }
 
 
@@ -218,12 +243,21 @@ JetHTAnalyzer::beginJob()
   h_probeDxyErr = outfile_->make<TH1F>("h_probeDxyErr","error on d_{xy}(PV) of the probe track;track error on d_{xy}(PV);tracks",100,0.,100 );	   
   h_probeDzErr  = outfile_->make<TH1F>("h_probeDzErr","error on d_{z}(PV)  of the probe track;track erro on d_{z}(PV);tracks",100,0.,100 );	  
 
+  mon.addHistogram( new TH1F( "nvtx",";Vertices;Events",50,0,50) );
+  mon.addHistogram( new TH1F( "dxy",";d_{xy};tracks",100,-100,100) );
+  mon.addHistogram( new TH1F( "dz",";d_{xy};tracks",100,-100,100) );
+  mon.addHistogram( new TH1F( "dxyerr",";d_{xy} error;tracks",100,0.,200) );
+  mon.addHistogram( new TH1F( "dxyerr",";d_{xy} error;tracks",100,0.,200) );
+  mon.addHistogram( new TProfile( "dxyErrVsPt",";track p_{T};d_{xy} error",100,0.,200,0.,100.));
+  mon.addHistogram( new TProfile( "dzErrVsPt" ,";track p_{T};d_{z} error" ,100,0.,200,0.,100.));
+    
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
 void
 JetHTAnalyzer::endJob()
 {
+  mon.Write();
 }
 
 // ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
