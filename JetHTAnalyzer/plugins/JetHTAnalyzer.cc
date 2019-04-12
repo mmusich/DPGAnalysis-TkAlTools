@@ -47,6 +47,7 @@
 // ROOT includes
 #include "TRandom.h"
 #include "TTree.h"
+#include "TString.h"
 
 //
 // class declaration
@@ -84,6 +85,8 @@ class JetHTAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
       double minVtxNdf_;
       double minVtxWgt_;
 
+      std::vector<int> iovList_;
+
       edm::Service<TFileService> outfile_;
       TH1F* h_ntrks ;
       TH1F* h_probePt;
@@ -115,7 +118,8 @@ JetHTAnalyzer::JetHTAnalyzer(const edm::ParameterSet& iConfig) :
   tracksTag_        (iConfig.getParameter<edm::InputTag>("trackCollection")), 
   tracksToken_ (consumes<reco::TrackCollection>(tracksTag_)),
   minVtxNdf_        (iConfig.getUntrackedParameter<double>("minVertexNdf")), 
-  minVtxWgt_ (iConfig.getUntrackedParameter<double>("minVertexMeanWeight"))
+  minVtxWgt_ (iConfig.getUntrackedParameter<double>("minVertexMeanWeight")),
+  iovList_ (iConfig.getUntrackedParameter<std::vector<int>>("iovList"))
 {
    //now do what ever initialization is needed
 }
@@ -153,6 +157,18 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   edm::Handle<reco::TrackCollection> tracks; 
   iEvent.getByToken(tracksToken_, tracks);
+ 
+  // Find the IOV of the current event so that we can tag a histogram with the IOV
+  const int runNumber = iEvent.id().run();
+  TString iovString = "iovNotFound";
+
+  // Find the current IOV from the IOV list
+  for(std::vector<int>::size_type i = 1; i < iovList_.size(); i++){
+    if(iovList_.at(i) > runNumber){
+      iovString = Form("iov%d-%d",iovList_.at(i-1),iovList_.at(i)-1);
+      break;
+    }
+  }
 
   int counter=0;
   for (reco::VertexCollection::const_iterator pvIt = pvtx.begin(); pvIt!=pvtx.end(); pvIt++){
@@ -210,6 +226,15 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       mon.fillProfile("dxyErrVsPt","all",trackpt,dxy_err,1.);
       mon.fillProfile("dzErrVsPt" ,"all",trackpt,dz_err,1.);
 
+      // Fill IOV specific histograms
+      mon.fillHisto("dxy",iovString,dxyRes,1.);
+      mon.fillHisto("dz",iovString,dzRes,1.);
+      mon.fillHisto("dxyerr",iovString,dxy_err,1.);
+      mon.fillHisto("dzerr",iovString,dz_err,1.);
+
+      mon.fillProfile("dxyErrVsPt",iovString,trackpt,dxy_err,1.);
+      mon.fillProfile("dzErrVsPt" ,iovString,trackpt,dz_err,1.);
+
       if(std::abs(tracketa)<1.){
 	mon.fillHisto("dxy","central",dxyRes,1.);
 	mon.fillHisto("dz","central",dzRes,1.);
@@ -245,9 +270,9 @@ JetHTAnalyzer::beginJob()
 
   mon.addHistogram( new TH1F( "nvtx",";Vertices;Events",50,0,50) );
   mon.addHistogram( new TH1F( "dxy",";d_{xy};tracks",100,-100,100) );
-  mon.addHistogram( new TH1F( "dz",";d_{xy};tracks",100,-100,100) );
+  mon.addHistogram( new TH1F( "dz",";d_{z};tracks",100,-100,100) );
   mon.addHistogram( new TH1F( "dxyerr",";d_{xy} error;tracks",100,0.,200) );
-  mon.addHistogram( new TH1F( "dxyerr",";d_{xy} error;tracks",100,0.,200) );
+  mon.addHistogram( new TH1F( "dzerr",";d_{z} error;tracks",100,0.,200) );
   mon.addHistogram( new TProfile( "dxyErrVsPt",";track p_{T};d_{xy} error",100,0.,200,0.,100.));
   mon.addHistogram( new TProfile( "dzErrVsPt" ,";track p_{T};d_{z} error" ,100,0.,200,0.,100.));
     
