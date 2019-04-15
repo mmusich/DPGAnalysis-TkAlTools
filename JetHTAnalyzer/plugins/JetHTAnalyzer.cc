@@ -48,6 +48,7 @@
 #include "TRandom.h"
 #include "TTree.h"
 #include "TString.h"
+#include "TMath.h"
 
 //
 // class declaration
@@ -163,10 +164,12 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   TString iovString = "iovNotFound";
 
   // Find the current IOV from the IOV list
-  for(std::vector<int>::size_type i = 1; i < iovList_.size(); i++){
-    if(iovList_.at(i) > runNumber){
-      iovString = Form("iov%d-%d",iovList_.at(i-1),iovList_.at(i)-1);
-      break;
+  if(runNumber >= iovList_.at(0)){ // If run number is smaller than the first item in the list, it is not in any IOV
+    for(std::vector<int>::size_type i = 1; i < iovList_.size(); i++){
+      if(iovList_.at(i) > runNumber){
+        iovString = Form("iov%d-%d",iovList_.at(i-1),iovList_.at(i)-1);
+        break;
+      }
     }
   }
 
@@ -226,6 +229,9 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       mon.fillProfile("dxyErrVsPt","all",trackpt,dxy_err,1.);
       mon.fillProfile("dzErrVsPt" ,"all",trackpt,dz_err,1.);
 
+      mon.fillProfile("dxyErrVsPhi","all",trackphi,dxy_err,1.);
+      mon.fillProfile("dzErrVsPhi" ,"all",trackphi,dz_err,1.);
+
       // Fill IOV specific histograms
       mon.fillHisto("dxy",iovString,dxyRes,1.);
       mon.fillHisto("dz",iovString,dzRes,1.);
@@ -235,6 +241,9 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       mon.fillProfile("dxyErrVsPt",iovString,trackpt,dxy_err,1.);
       mon.fillProfile("dzErrVsPt" ,iovString,trackpt,dz_err,1.);
 
+      mon.fillProfile("dxyErrVsPhi",iovString,trackphi,dxy_err,1.);
+      mon.fillProfile("dzErrVsPhi" ,iovString,trackphi,dz_err,1.);
+
       if(std::abs(tracketa)<1.){
 	mon.fillHisto("dxy","central",dxyRes,1.);
 	mon.fillHisto("dz","central",dzRes,1.);
@@ -243,6 +252,9 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 	mon.fillProfile("dxyErrVsPt","central",trackpt,dxy_err,1.);
 	mon.fillProfile("dzErrVsPt" ,"central",trackpt,dz_err,1.);
+
+        mon.fillProfile("dxyErrVsPhi","central",trackphi,dxy_err,1.);
+        mon.fillProfile("dzErrVsPhi" ,"central",trackphi,dz_err,1.);
       }     
       
     }// loop on tracks in vertex
@@ -275,6 +287,8 @@ JetHTAnalyzer::beginJob()
   mon.addHistogram( new TH1F( "dzerr",";d_{z} error;tracks",100,0.,200) );
   mon.addHistogram( new TProfile( "dxyErrVsPt",";track p_{T};d_{xy} error",100,0.,200,0.,100.));
   mon.addHistogram( new TProfile( "dzErrVsPt" ,";track p_{T};d_{z} error" ,100,0.,200,0.,100.));
+  mon.addHistogram( new TProfile( "dxyErrVsPhi",";track #varphi;d_{xy} error",100,-TMath::Pi(),TMath::Pi(),0.,100.));
+  mon.addHistogram( new TProfile( "dzErrVsPhi" ,";track #varphi;d_{z} error" ,100,-TMath::Pi(),TMath::Pi(),0.,100.));
     
 }
 
