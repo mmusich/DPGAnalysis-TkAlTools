@@ -12,3 +12,17 @@ cd TkAlTools/JetHTAnalyzer/test/
 cmsRun JetHTAnalyzer_cfg.py
 
 ```
+
+For running the analysis on CRAB, do the following instead of the cmsRun command in the above instructions:
+
+1. Edit the following lines in file crabJetHT.py
+  - inputList = Give here a list of files you want to analyse
+  - jobTag = Give a unique name for your job
+  - config.Site.storageSite = Give a site name where you have write rights
+
+2. Run the analysis on CRAB:
+  ```
+  source /cvmfs/cms.cern.ch/crab3/crab.sh
+  voms-proxy-init --voms cms
+  crab submit -c crabJetHT.py
+  ```
