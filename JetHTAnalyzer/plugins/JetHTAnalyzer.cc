@@ -278,7 +278,7 @@ JetHTAnalyzer::beginJob()
   h_probeDxy    = outfile_->make<TH1F>("h_probeDxy","d_{xy}(PV) of the probe track;track d_{xy}(PV);tracks",200,-100,100 );
   h_probeDz     = outfile_->make<TH1F>("h_probeDz","d_{z}(PV) of the probe track;track d_{z}(PV);tracks",200,-100,100 );    
   h_probeDxyErr = outfile_->make<TH1F>("h_probeDxyErr","error on d_{xy}(PV) of the probe track;track error on d_{xy}(PV);tracks",100,0.,100 );	   
-  h_probeDzErr  = outfile_->make<TH1F>("h_probeDzErr","error on d_{z}(PV)  of the probe track;track erro on d_{z}(PV);tracks",100,0.,100 );	  
+  h_probeDzErr  = outfile_->make<TH1F>("h_probeDzErr","error on d_{z}(PV)  of the probe track;track error on d_{z}(PV);tracks",100,0.,100 );	  
 
   mon.addHistogram( new TH1F( "nvtx",";Vertices;Events",50,0,50) );
   mon.addHistogram( new TH1F( "dxy",";d_{xy};tracks",100,-100,100) );

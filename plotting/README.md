@@ -14,8 +14,8 @@ How to plot the figures from root files produced by the analysis done with TkAlT
   ```
 
 3. To easily see the plots that are produced, compile them into single pdf file using prepareSlides.sh script:
-   ```
-   ./prepareSlides.sh iovListForSlides.txt jetHt_plotCollection.tex
-   ```
+  ```
+  ./prepareSlides.sh iovListForSlides.txt jetHt_plotCollection.tex
+  ```
 
 4. Examine the results in the produced pdf file
