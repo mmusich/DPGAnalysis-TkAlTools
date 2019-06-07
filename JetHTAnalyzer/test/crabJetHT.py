@@ -2,8 +2,8 @@ from WMCore.Configuration import Configuration
 from CRABClient.UserUtilities import getUsernameFromSiteDB
 config = Configuration()
 
-inputList='crabFilesJetHT10keventsPerIov.txt'
-jobTag='TkAlJetHTAnalysis_Run2017ABCDEF-v1_10keventPerIov_partMissing'
+inputList='crabFilesJetHT10keventsPerIovNewAlignment.txt'
+jobTag='TkAlJetHTAnalysis_Run2017ABCDEF-v1_10keventPerIov_newAlignment_2019-06-05'
 
 config.section_("General")
 config.General.requestName = jobTag
@@ -15,7 +15,8 @@ config.section_("JobType")
 config.JobType.pluginName = 'Analysis'
 config.JobType.psetName = 'JetHTAnalyzer_cfg.py'
 config.JobType.numCores = 1
-config.JobType.maxMemoryMB = 2000
+config.JobType.maxMemoryMB = 1500
+config.JobType.maxJobRuntimeMin = 360
 
 config.section_("Data")
 config.Data.userInputFiles = open(inputList).readlines()
@@ -27,5 +28,5 @@ config.Data.outLFNDirBase = ('/store/user/%s/' % (getUsernameFromSiteDB())) + co
 config.Data.publication = False
 
 config.section_("Site")
-config.Site.whitelist = ['T2_US_Purdue','T2_US_Wisconsin','T2_US_Nebraska']
+config.Site.whitelist = ['T2_US_*']
 config.Site.storageSite = 'T3_US_FNALLPC'

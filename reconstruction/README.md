@@ -17,4 +17,4 @@ Reconstructing RAW data to a format that can be more easily analyzed
 
 ## Troubleshooting
 
-In case some of the crab jobs fail and cannot be recovered with `crab resubmit` command, you can generate a file list for only the failed jobs using `./makeFailList.sh` script. This script required you to copy a status table printed by `crab status --long` command to a text file. Then you can easily send a recovery job excluding all the files that were previously reconstructed successfully.
+In case some of the crab jobs fail and cannot be recovered with `crab resubmit` command, you can generate a file list for only the failed jobs using `./makeFailList.sh` script. This script requires you to copy a status table printed by `crab status --long` command to a text file. Then you can easily send a recovery job excluding all the files that were previously reconstructed successfully.
