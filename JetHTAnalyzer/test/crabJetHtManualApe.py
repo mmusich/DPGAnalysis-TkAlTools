@@ -3,7 +3,7 @@ from CRABClient.UserUtilities import getUsernameFromSiteDB
 config = Configuration()
 
 inputList='crabFilesJetHT10keventsPerIovNewAlignment.txt'
-jobTag='TkAlJetHTAnalysis_Run2017ABCDEF-v1_10keventPerIov_ultralegacy_v2_2019-06-07_sanityCheck'
+jobTag='TkAlJetHTAnalysis_Run2017ABCDEF-v1_10keventPerIov_manualApe_2019-06-07'
 
 config.section_("General")
 config.General.requestName = jobTag
@@ -17,6 +17,7 @@ config.JobType.psetName = 'JetHTAnalyzer_cfg.py'
 config.JobType.numCores = 1
 config.JobType.maxMemoryMB = 1500
 config.JobType.maxJobRuntimeMin = 360
+config.JobType.inputFiles = ['ul2017_comparison_merged.db']
 
 config.section_("Data")
 config.Data.userInputFiles = open(inputList).readlines()

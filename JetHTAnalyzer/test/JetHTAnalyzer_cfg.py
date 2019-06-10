@@ -23,81 +23,96 @@ process.load('TrackingTools.TransientTrack.TransientTrackBuilder_cfi')
 
 process.source = cms.Source("PoolSource",
                             #fileNames = cms.untracked.vstring('file:/tmp/musich/CMSSW_10_4_0/src/Alignment/JetHTAnalyzer/test/TkAlMinBias.root')
-                            fileNames = cms.untracked.vstring('root://cmsxrootd.fnal.gov//store/user/jviinika/TkAlJetHTReconstruction_Run2017ABCDEF-v1_10keventPerIov/TrackAlignment_jetHTreconstruction/crab_TkAlJetHTReconstruction_Run2017ABCDEF-v1_10keventPerIov/190305_003651/0000/TkAlJetHT_1.root')
+                            fileNames = cms.untracked.vstring('root://cmsxrootd.fnal.gov//store/user/jviinika/TkAlJetHTReconstruction_Run2017ABCDEF-v1_10keventPerIov/TrackAlignment_jetHTreconstruction/crab_TkAlJetHTReconstruction_Run2017ABCDEF-v1_10keventPerIov/190305_003651/0000/TkAlJetHT_2.root')
                             )
 
 process.load("RecoVertex.BeamSpotProducer.BeamSpot_cfi")
 process.GlobalTag.globaltag = '104X_dataRun2_v1'
 
 # Append alignment condition to the global tag
-process.GlobalTag.toGet.append(
-cms.PSet(
-  connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
-  record = cms.string("SiPixelTemplateDBObjectRcd"),
-  tag = cms.string("SiPixelTemplateDBObject_38T_v15_offline")),
-)
-
-process.GlobalTag.toGet.append(
-cms.PSet(
-  connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
-  record = cms.string("TrackerAlignmentRcd"),
-  tag = cms.string("TrackerAlignment_2017_ultralegacy_v1")),
-)
-
-process.GlobalTag.toGet.append(
-cms.PSet(
-  connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
-  record = cms.string("TrackerAlignmentErrorExtendedRcd"),
-  tag = cms.string("TrackerAlignmentExtendedErrors_2017_ultralegacy_v1")),
-)
-
-process.GlobalTag.toGet.append(
-cms.PSet(
-  connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
-  record = cms.string("TrackerSurfaceDeformationRcd"),
-  tag = cms.string("TrackerSurfaceDeformations_2017_ultralegacy_v1")),
-)
+# Note: This is equivalent with the uncommented conditionsInXXX syntax
+# Only one of these must the uncommented at the same time.
+#process.GlobalTag.toGet.append(
+#cms.PSet(
+#  connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
+#  record = cms.string("SiPixelTemplateDBObjectRcd"),
+#  tag = cms.string("SiPixelTemplateDBObject_38T_v15_offline")),
+#)
+#
+#process.GlobalTag.toGet.append(
+#cms.PSet(
+#  connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
+#  record = cms.string("TrackerAlignmentRcd"),
+#  tag = cms.string("TrackerAlignment_2017_ultralegacy_v1")),
+#)
+#
+#process.GlobalTag.toGet.append(
+#cms.PSet(
+#  connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
+#  record = cms.string("TrackerAlignmentErrorExtendedRcd"),
+#  tag = cms.string("TrackerAlignmentExtendedErrors_2017_ultralegacy_v2")),
+#)
+#
+#process.GlobalTag.toGet.append(
+#cms.PSet(
+#  connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
+#  record = cms.string("TrackerSurfaceDeformationRcd"),
+#  tag = cms.string("TrackerSurfaceDeformations_2017_ultralegacy_v1")),
+#)
 
 # Refit the tracks with the latest alignment and APE tags from the UL2017 campaign
-#import CalibTracker.Configuration.Common.PoolDBESSource_cfi
-#
-#process.conditionsInSiPixelTemplateDBObjectRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
-#     connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
-#     toGet = cms.VPSet(cms.PSet(record = cms.string('SiPixelTemplateDBObjectRcd'),
-#                               tag = cms.string('SiPixelTemplateDBObject_38T_v15_offline')
-#                               )
-#                      )
-#    )
-#process.prefer_conditionsInSiPixelTemplateDBObjectRcd = cms.ESPrefer("PoolDBESSource", "conditionsInSiPixelTemplateDBObjectRcd")
-#
-#process.conditionsInTrackerAlignmentRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
-#     connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
-#     toGet = cms.VPSet(cms.PSet(record = cms.string('TrackerAlignmentRcd'),
-#                               tag = cms.string('TrackerAlignment_2017_ultralegacy_v1')
-#                               )
-#                      )
-#    )
-#process.prefer_conditionsInTrackerAlignmentRcd = cms.ESPrefer("PoolDBESSource", "conditionsInTrackerAlignmentRcd")
-#
+import CalibTracker.Configuration.Common.PoolDBESSource_cfi
+
+process.conditionsInSiPixelTemplateDBObjectRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
+     connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+     toGet = cms.VPSet(cms.PSet(record = cms.string('SiPixelTemplateDBObjectRcd'),
+                               tag = cms.string('SiPixelTemplateDBObject_38T_v15_offline')
+                               )
+                      )
+    )
+process.prefer_conditionsInSiPixelTemplateDBObjectRcd = cms.ESPrefer("PoolDBESSource", "conditionsInSiPixelTemplateDBObjectRcd")
+
+process.conditionsInTrackerAlignmentRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
+     connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+     toGet = cms.VPSet(cms.PSet(record = cms.string('TrackerAlignmentRcd'),
+                               tag = cms.string('TrackerAlignment_2017_ultralegacy_v1')
+                               )
+                      )
+    )
+process.prefer_conditionsInTrackerAlignmentRcd = cms.ESPrefer("PoolDBESSource", "conditionsInTrackerAlignmentRcd")
+
+# Comment this section if the below conditionsInTrackerAlignmentErrorExtendedRcd block is uncommented
+process.conditionsInTrackerAlignmentErrorExtendedRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
+     connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+     toGet = cms.VPSet(cms.PSet(record = cms.string('TrackerAlignmentErrorExtendedRcd'),
+                               tag = cms.string('TrackerAlignmentExtendedErrors_2017_ultralegacy_v2')
+                               )
+                      )
+    )
+
+## Load TrackerAlignmentErrorExtendedRcd from a database file instead of tag
+## Comment this section if the above conditionsInTrackerAlignmentErrorExtendedRcd block is uncommented
 #process.conditionsInTrackerAlignmentErrorExtendedRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
-#     connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+#     connect = cms.string('sqlite_file:ul2017_comparison_merged.db'),
 #     toGet = cms.VPSet(cms.PSet(record = cms.string('TrackerAlignmentErrorExtendedRcd'),
-#                               tag = cms.string('TrackerAlignmentExtendedErrors_2017_ultralegacy_v1')
+#                               tag = cms.string('APEs')
 #                               )
 #                      )
 #    )
-#process.prefer_conditionsInTrackerAlignmentErrorExtendedRcd = cms.ESPrefer("PoolDBESSource", "conditionsInTrackerAlignmentErrorExtendedRcd")
-#
-## Block for the surface deformations
-#
-#process.conditionsInTrackerSurfaceDeformationRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
-#     connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
-#     toGet = cms.VPSet(cms.PSet(record = cms.string('TrackerSurfaceDeformationRcd'),
-#                               tag = cms.string('TrackerSurfaceDeformations_2017_ultralegacy_v1')
-#                               )
-#                      )
-#    )
-#process.prefer_conditionsInTrackerSurfaceDeformationRcd = cms.ESPrefer("PoolDBESSource", "conditionsInTrackerSurfaceDeformationRcd")
+
+# The prefer statement in common for the two above TrackerAlignmentErrorExtendedRcd blocks
+process.prefer_conditionsInTrackerAlignmentErrorExtendedRcd = cms.ESPrefer("PoolDBESSource", "conditionsInTrackerAlignmentErrorExtendedRcd")
+
+# Block for the surface deformations
+
+process.conditionsInTrackerSurfaceDeformationRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
+     connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+     toGet = cms.VPSet(cms.PSet(record = cms.string('TrackerSurfaceDeformationRcd'),
+                               tag = cms.string('TrackerSurfaceDeformations_2017_ultralegacy_v1')
+                               )
+                      )
+    )
+process.prefer_conditionsInTrackerSurfaceDeformationRcd = cms.ESPrefer("PoolDBESSource", "conditionsInTrackerSurfaceDeformationRcd")
 
 # Original track refitter code, should still be included?
 process.load("RecoTracker.TrackProducer.TrackRefitters_cff")
