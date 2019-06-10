@@ -74,6 +74,75 @@ do
   printf "\\\\end{frame}\n" >> $LATEXFILE
   printf "\n" >> $LATEXFILE
 done < $IOVLIST
+printf "\\\\begin{frame}\n" >> $LATEXFILE
+printf "\\\\frametitle{IOV integrated \$d_{z}\$ and \$d_{xy}\$ distributions, all tracks}\n" >> $LATEXFILE
+printf "  \\\\begin{columns}[c,onlytextwidth]\n" >> $LATEXFILE
+printf "    \\\\begin{column}{0.48\\\\textwidth}\n" >> $LATEXFILE
+printf "      \\\\begin{center}\n" >> $LATEXFILE
+printf "        \\\\includegraphics[width=13em]{figures/dxy_all}\n" >> $LATEXFILE
+printf "      \\\\end{center}\n" >> $LATEXFILE
+printf "      \\\\begin{center}\n" >> $LATEXFILE
+printf "        \\\\includegraphics[width=13em]{figures/dxyerr_all}\n" >> $LATEXFILE
+printf "      \\\\end{center}\n" >> $LATEXFILE
+printf "    \\\\end{column}\n" >> $LATEXFILE
+printf "    \\\\begin{column}{0.48\\\\textwidth}\n" >> $LATEXFILE
+printf "      \\\\begin{center}\n" >> $LATEXFILE
+printf "        \\\\includegraphics[width=13em]{figures/dz_all}\n" >> $LATEXFILE
+printf "      \\\\end{center}\n" >> $LATEXFILE
+printf "      \\\\begin{center}\n" >> $LATEXFILE
+printf "        \\\\includegraphics[width=13em]{figures/dzerr_all}\n" >> $LATEXFILE
+printf "      \\\\end{center}\n" >> $LATEXFILE
+printf "    \\\\end{column}\n" >> $LATEXFILE
+printf "  \\\\end{columns}\n" >> $LATEXFILE
+printf "\\\\end{frame}\n" >> $LATEXFILE
+printf "\n" >> $LATEXFILE
+printf "\\\\begin{frame}\n" >> $LATEXFILE
+printf "\\\\frametitle{IOV integrated \$d_{z}\$ and \$d_{xy}\$ distributions, central tracks}\n" >> $LATEXFILE
+printf "  \\\\begin{columns}[c,onlytextwidth]\n" >> $LATEXFILE
+printf "    \\\\begin{column}{0.48\\\\textwidth}\n" >> $LATEXFILE
+printf "      \\\\begin{center}\n" >> $LATEXFILE
+printf "        \\\\includegraphics[width=13em]{figures/dxy_central}\n" >> $LATEXFILE
+printf "      \\\\end{center}\n" >> $LATEXFILE
+printf "      \\\\begin{center}\n" >> $LATEXFILE
+printf "        \\\\includegraphics[width=13em]{figures/dxyerr_central}\n" >> $LATEXFILE
+printf "      \\\\end{center}\n" >> $LATEXFILE
+printf "    \\\\end{column}\n" >> $LATEXFILE
+printf "    \\\\begin{column}{0.48\\\\textwidth}\n" >> $LATEXFILE
+printf "      \\\\begin{center}\n" >> $LATEXFILE
+printf "        \\\\includegraphics[width=13em]{figures/dz_central}\n" >> $LATEXFILE
+printf "      \\\\end{center}\n" >> $LATEXFILE
+printf "      \\\\begin{center}\n" >> $LATEXFILE
+printf "        \\\\includegraphics[width=13em]{figures/dzerr_central}\n" >> $LATEXFILE
+printf "      \\\\end{center}\n" >> $LATEXFILE
+printf "    \\\\end{column}\n" >> $LATEXFILE
+printf "  \\\\end{columns}\n" >> $LATEXFILE
+printf "\\\\end{frame}\n" >> $LATEXFILE
+printf "\n" >> $LATEXFILE
+while read line 
+do
+  printf "\\\\begin{frame}\n" >> $LATEXFILE
+  printf "\\\\frametitle{\$d_{z}\$ and \$d_{xy}\$ distributions for IOV ${line}}\n" >> $LATEXFILE
+  printf "  \\\\begin{columns}[c,onlytextwidth]\n" >> $LATEXFILE
+  printf "    \\\\begin{column}{0.48\\\\textwidth}\n" >> $LATEXFILE
+  printf "      \\\\begin{center}\n" >> $LATEXFILE
+  printf "        \\\\includegraphics[width=13em]{figures/dxy_iov${line}}\n" >> $LATEXFILE
+  printf "      \\\\end{center}\n" >> $LATEXFILE
+  printf "      \\\\begin{center}\n" >> $LATEXFILE
+  printf "        \\\\includegraphics[width=13em]{figures/dxyerr_iov${line}}\n" >> $LATEXFILE
+  printf "      \\\\end{center}\n" >> $LATEXFILE
+  printf "    \\\\end{column}\n" >> $LATEXFILE
+  printf "    \\\\begin{column}{0.48\\\\textwidth}\n" >> $LATEXFILE
+  printf "      \\\\begin{center}\n" >> $LATEXFILE
+  printf "        \\\\includegraphics[width=13em]{figures/dz_iov${line}}\n" >> $LATEXFILE
+  printf "      \\\\end{center}\n" >> $LATEXFILE
+  printf "      \\\\begin{center}\n" >> $LATEXFILE
+  printf "        \\\\includegraphics[width=13em]{figures/dzerr_iov${line}}\n" >> $LATEXFILE
+  printf "      \\\\end{center}\n" >> $LATEXFILE
+  printf "    \\\\end{column}\n" >> $LATEXFILE
+  printf "  \\\\end{columns}\n" >> $LATEXFILE
+  printf "\\\\end{frame}\n" >> $LATEXFILE
+  printf "\n" >> $LATEXFILE
+done < $IOVLIST
 printf "\\\\end{document}" >> $LATEXFILE
 
 # Compile the slides to pdf

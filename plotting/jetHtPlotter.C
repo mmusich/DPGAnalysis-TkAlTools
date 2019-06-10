@@ -42,28 +42,29 @@ void jetHtPlotter(TString inputFileName = "jetHtAnalysis_partMissing.root", TStr
   
   enum enumHistogramType{kDz, kDzError, kDxy, kDxyError, knHistogramTypes};
   TString histogramName[knHistogramTypes] = {"dz","dzerr","dxy","dxyerr"};
+  TString histogramXaxis[knHistogramTypes] = {"d_{z} (#mum)","#sigma(d_{z}) (#mum)","d_{xy} (#mum)","#sigma(d_{xy}) (#mum)"};
   enum enumProfileType{kDzErrorVsPt, kDzErrorVsPhi, kDxyErrorVsPt, kDxyErrorVsPhi, knProfileTypes};
   TString profileName[knProfileTypes] = {"dzErrVsPt","dzErrVsPhi","dxyErrVsPt","dxyErrVsPhi"};
-  TString profileXaxis[knProfileTypes] = {"p_{T}","#phi","p_{T}","#phi"};
+  TString profileXaxis[knProfileTypes] = {"p_{T} (GeV)","#varphi","p_{T} (GeV)","#varphi"};
   TString profileYaxis[knProfileTypes] = {"d_{z}","d_{z}","d_{xy}","d_{xy}"};
   bool drawHistogram[knHistogramTypes];
   bool drawProfile[knProfileTypes];
   
   bool drawTrackQA = false;             // Draw track and vertex QA figures
-  drawHistogram[kDz] = false;           // Draw the dz histograms
-  drawHistogram[kDzError] = false;      // Draw the dz error histograms
+  drawHistogram[kDz] = true;           // Draw the dz histograms
+  drawHistogram[kDzError] = true;      // Draw the dz error histograms
   drawProfile[kDzErrorVsPt] = true;    // Draw mean dz error as a function of pT
   drawProfile[kDzErrorVsPhi] = true;   // Draw mean dz error as a function of phi
-  drawHistogram[kDxy] = false;          // Draw the dxy histograms
-  drawHistogram[kDxyError] = false;     // Draw the dxy error histograms
+  drawHistogram[kDxy] = true;          // Draw the dxy histograms
+  drawHistogram[kDxyError] = true;     // Draw the dxy error histograms
   drawProfile[kDxyErrorVsPt] = true;   // Draw the dxy error as a function of pT
   drawProfile[kDxyErrorVsPhi] = true;  // Draw the dxy error as a function of phi
   
   int colors[] = {kRed,kMagenta,kGreen+3,kViolet+3,kOrange,kPink-7,kSpring+3,kAzure-7};
   int nIovInOnePlot = 1;  // Define how many iov:s are drawn to the same plot
   
-  double profileZoomLow[knProfileTypes] = {0,30,0,30};
-  double profileZoomHigh[knProfileTypes] = {80,80,80,80};
+  double profileZoomLow[knProfileTypes] = {25,30,10,30};
+  double profileZoomHigh[knProfileTypes] = {55,80,35,80};
   
   bool saveFigures = true;
   
@@ -85,7 +86,7 @@ void jetHtPlotter(TString inputFileName = "jetHtAnalysis_partMissing.root", TStr
   // Text written to the legend for each file
   TString legendComment[2];
   legendComment[0] = "default";
-  legendComment[1] = "UL v1";
+  legendComment[1] = "UL merge";
   
   // ======================================================
   // ================ Configuration done ==================
@@ -199,7 +200,7 @@ void jetHtPlotter(TString inputFileName = "jetHtAnalysis_partMissing.root", TStr
         legend[0]->SetTextSize(0.05);legend[0]->SetTextFont(62);
         
         if(jetHtHistograms[0][iHistogramType][iIov] != NULL){
-          drawer->DrawHistogram(jetHtHistograms[0][iHistogramType][iIov], histogramName[iHistogramType], "tracks", iovNames.at(iIov).Data());
+          drawer->DrawHistogram(jetHtHistograms[0][iHistogramType][iIov], histogramXaxis[iHistogramType], "tracks", iovNames.at(iIov).Data());
           legend[0]->AddEntry(jetHtHistograms[0][iHistogramType][iIov],legendComment[0],"l");
           
           if(jetHtHistograms[1][iHistogramType][iIov] != NULL){
@@ -261,7 +262,7 @@ void jetHtPlotter(TString inputFileName = "jetHtAnalysis_partMissing.root", TStr
         if(noIovFound) continue;
         
         // First, draw the reference over all runs to the plot
-        drawer->DrawHistogram(jetHtProfiles[0][iProfileType][nIov-2], profileXaxis[iProfileType], Form("#LT#sigma(%s)#GT",profileYaxis[iProfileType].Data()));
+        drawer->DrawHistogram(jetHtProfiles[0][iProfileType][nIov-2], profileXaxis[iProfileType], Form("#LT#sigma(%s)#GT (#mum)",profileYaxis[iProfileType].Data()));
         
         // Define a new legend for the plot
         for(int iFile = 0; iFile < compareFiles; iFile++){
@@ -304,7 +305,7 @@ void jetHtPlotter(TString inputFileName = "jetHtAnalysis_partMissing.root", TStr
       
       
       // After all IOV:s, draw summary with all and central curves
-      drawer->DrawHistogram(jetHtProfiles[0][iProfileType][nIov-2], profileXaxis[iProfileType], Form("#LT#sigma(%s)#GT",profileYaxis[iProfileType].Data()));
+      drawer->DrawHistogram(jetHtProfiles[0][iProfileType][nIov-2], profileXaxis[iProfileType], Form("#LT#sigma(%s)#GT (#mum)",profileYaxis[iProfileType].Data()));
       
       // Add a reference to all runs in central eta range
       jetHtProfiles[0][iProfileType][nIov-1]->SetLineColor(kRed);
