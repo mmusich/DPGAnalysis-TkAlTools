@@ -43,6 +43,8 @@
 #include "TrackingTools/Records/interface/TransientTrackRecord.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
 #include "TkAlTools/JetHTAnalyzer/interface/SmartSelectionMonitor.h"
+#include "DataFormats/Common/interface/TriggerResults.h" // Classes needed to print trigger results
+#include "FWCore/Common/interface/TriggerNames.h"
 
 // ROOT includes
 #include "TRandom.h"
@@ -83,6 +85,10 @@ class JetHTAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
       edm::InputTag      tracksTag_                        ;
       edm::EDGetTokenT<reco::TrackCollection>  tracksToken_;
 
+      edm::InputTag      triggerTag_;
+      edm::EDGetTokenT<edm::TriggerResults>  triggerToken_;
+
+      int printTriggerTable_;
       double minVtxNdf_;
       double minVtxWgt_;
 
@@ -117,7 +123,10 @@ JetHTAnalyzer::JetHTAnalyzer(const edm::ParameterSet& iConfig) :
   pvsTag_           (iConfig.getParameter<edm::InputTag>("vtxCollection")), 
   pvsToken_         (consumes<reco::VertexCollection>(pvsTag_)), 
   tracksTag_        (iConfig.getParameter<edm::InputTag>("trackCollection")), 
-  tracksToken_ (consumes<reco::TrackCollection>(tracksTag_)),
+  tracksToken_      (consumes<reco::TrackCollection>(tracksTag_)),
+  triggerTag_       (iConfig.getParameter<edm::InputTag>("triggerResults")), 
+  triggerToken_     (consumes<edm::TriggerResults>(triggerTag_)),
+  printTriggerTable_(iConfig.getUntrackedParameter<int>("printTriggerTable")), 
   minVtxNdf_        (iConfig.getUntrackedParameter<double>("minVertexNdf")), 
   minVtxWgt_ (iConfig.getUntrackedParameter<double>("minVertexMeanWeight")),
   iovList_ (iConfig.getUntrackedParameter<std::vector<int>>("iovList"))
@@ -170,6 +179,18 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         iovString = Form("iov%d-%d",iovList_.at(i-1),iovList_.at(i)-1);
         break;
       }
+    }
+  }
+
+  // Print the triggers to console
+  if(printTriggerTable_){
+    edm::Handle<edm::TriggerResults> triggerResults;
+    iEvent.getByToken(triggerToken_, triggerResults);
+
+    const edm::TriggerNames triggerNames = iEvent.triggerNames(*triggerResults);
+    for (unsigned i=0; i<triggerNames.size(); i++) {
+      std::string hltName = triggerNames.triggerName(i);
+      std::cout << hltName << std::endl;
     }
   }
 
@@ -232,6 +253,9 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       mon.fillProfile("dxyErrVsPhi","all",trackphi,dxy_err,1.);
       mon.fillProfile("dzErrVsPhi" ,"all",trackphi,dz_err,1.);
 
+      mon.fillProfile("dxyErrVsEta","all",tracketa,dxy_err,1.);
+      mon.fillProfile("dzErrVsEta" ,"all",tracketa,dz_err,1.);
+
       // Fill IOV specific histograms
       mon.fillHisto("dxy",iovString,dxyRes,1.);
       mon.fillHisto("dz",iovString,dzRes,1.);
@@ -243,6 +267,9 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
       mon.fillProfile("dxyErrVsPhi",iovString,trackphi,dxy_err,1.);
       mon.fillProfile("dzErrVsPhi" ,iovString,trackphi,dz_err,1.);
+
+      mon.fillProfile("dxyErrVsEta",iovString,tracketa,dxy_err,1.);
+      mon.fillProfile("dzErrVsEta" ,iovString,tracketa,dz_err,1.);
 
       if(std::abs(tracketa)<1.){
 	mon.fillHisto("dxy","central",dxyRes,1.);
@@ -289,6 +316,8 @@ JetHTAnalyzer::beginJob()
   mon.addHistogram( new TProfile( "dzErrVsPt" ,";track p_{T};d_{z} error" ,100,0.,200,0.,100.));
   mon.addHistogram( new TProfile( "dxyErrVsPhi",";track #varphi;d_{xy} error",100,-TMath::Pi(),TMath::Pi(),0.,100.));
   mon.addHistogram( new TProfile( "dzErrVsPhi" ,";track #varphi;d_{z} error" ,100,-TMath::Pi(),TMath::Pi(),0.,100.));
+  mon.addHistogram( new TProfile( "dxyErrVsEta",";track #eta;d_{xy} error",100,-2.5,2.5,0.,100.));
+  mon.addHistogram( new TProfile( "dzErrVsEta" ,";track #eta;d_{z} error" ,100,-2.5,2.5,0.,100.));
     
 }
 
