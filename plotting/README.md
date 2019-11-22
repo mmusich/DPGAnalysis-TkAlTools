@@ -13,6 +13,13 @@ How to plot the figures from root files produced by the analysis done with TkAlT
   root -l -b -q 'jetHtPlotter.C("inputFileName.root")'
   ```
 
+You can compare results from different files by drawing the results to the same figure. For this you need to give more than one file as an argument to the macro. Up to four files at a time can be compared in this manner:
+  ```
+  root -l -b -q 'jetHtPlotter.C("inputFile1.root", "inputFile2.root", "inputFile3.root", "inputFile4.root")'
+  ```
+
+When comparing several files, you can specify the comment put into the legend of the figures for each file using the variable legendComment.
+
 3. To easily see the plots that are produced, compile them into single pdf file using prepareSlides.sh script:
   ```
   ./prepareSlides.sh iovListForSlides.txt jetHt_plotCollection.tex
