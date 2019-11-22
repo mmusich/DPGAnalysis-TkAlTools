@@ -46,9 +46,10 @@ process.load('Configuration.Geometry.GeometryRecoDB_cff')
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('TrackingTools.TransientTrack.TransientTrackBuilder_cfi')
 
+# Input files. Choose different test input fule for MC and data
+
 if useMC:
   process.source = cms.Source("PoolSource",
-                              #fileNames = cms.untracked.vstring('root://cmsxrootd.fnal.gov//store/mc/RunIIWinter19PFCalibDRPremix/QCD_Pt_300to470_TuneCP5_13TeV_pythia8/ALCARECO/TkAlMinBias-2017Conditions_105X_mc2017_realistic_v5-v1/10000/EBF8B22E-50A1-F247-920A-23F1BF46F0AF.root')
                               fileNames = cms.untracked.vstring('root://xrootd-cms.infn.it//store/mc/RunIIWinter19PFCalibDRPremix/QCD_Pt_15to30_TuneCP5_13TeV_pythia8/ALCARECO/TkAlMinBias-2017Conditions_105X_mc2017_realistic_v5-v1/250000/134A5981-A7F5-AF49-9288-A99820BBEEE0.root')
                               )
 else:
@@ -59,41 +60,13 @@ else:
 
 process.load("RecoVertex.BeamSpotProducer.BeamSpot_cfi")
 
+# Define global tag. MC and data have different global tags
+
 if useMC:
   process.GlobalTag.globaltag = '105X_mc2017_realistic_v5'
 else:  
   process.GlobalTag.globaltag = '104X_dataRun2_v1'
 
-# Append alignment condition to the global tag
-# Note: This is equivalent with the uncommented conditionsInXXX syntax
-# Only one of these must the uncommented at the same time.
-#process.GlobalTag.toGet.append(
-#cms.PSet(
-#  connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
-#  record = cms.string("SiPixelTemplateDBObjectRcd"),
-#  tag = cms.string("SiPixelTemplateDBObject_38T_v15_offline")),
-#)
-#
-#process.GlobalTag.toGet.append(
-#cms.PSet(
-#  connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
-#  record = cms.string("TrackerAlignmentRcd"),
-#  tag = cms.string("TrackerAlignment_2017_ultralegacy_v1")),
-#)
-#
-#process.GlobalTag.toGet.append(
-#cms.PSet(
-#  connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
-#  record = cms.string("TrackerAlignmentErrorExtendedRcd"),
-#  tag = cms.string("TrackerAlignmentExtendedErrors_2017_ultralegacy_v2")),
-#)
-#
-#process.GlobalTag.toGet.append(
-#cms.PSet(
-#  connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
-#  record = cms.string("TrackerSurfaceDeformationRcd"),
-#  tag = cms.string("TrackerSurfaceDeformations_2017_ultralegacy_v1")),
-#)
 
 # Refit the tracks with the latest alignment and APE tags from the UL2017 campaign
 import CalibTracker.Configuration.Common.PoolDBESSource_cfi
@@ -154,18 +127,26 @@ if not useMC:
 # Configuration for Monte Carlo running
 else:
 
-  # Load TrackerAlignmentRcd from a database file
+  # Load TrackerAlignmentRcd from a tag
   process.conditionsInTrackerAlignmentRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
-       connect = cms.string('sqlite_file:alignments_MC2017_MP.db'),
+       connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
        toGet = cms.VPSet(cms.PSet(record = cms.string('TrackerAlignmentRcd'),
-                                 tag = cms.string('Alignments')
+                                 tag = cms.string('TrackerAlignment_2017_ultralegacymc_v2')
                                  )
                         )
       )
   process.prefer_conditionsInTrackerAlignmentRcd = cms.ESPrefer("PoolDBESSource", "conditionsInTrackerAlignmentRcd")
 
   # If a file is provided, load TrackerAlignmentErrorExtendedRcd from a database file
-  if errorFile != "nothing":
+  if errorFile == "nothing":
+    process.conditionsInTrackerAlignmentErrorExtendedRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
+         connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+         toGet = cms.VPSet(cms.PSet(record = cms.string('TrackerAlignmentErrorExtendedRcd'),
+                                   tag = cms.string('TrackerAlignmentExtendedErrors_2017_ultralegacymc_v2')
+                                   )
+                          )
+        )
+  else:
     process.conditionsInTrackerAlignmentErrorExtendedRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
          connect = cms.string("sqlite_file:" + errorFile),
          toGet = cms.VPSet(cms.PSet(record = cms.string('TrackerAlignmentErrorExtendedRcd'),
@@ -173,7 +154,8 @@ else:
                                    )
                           )
         )
-    process.prefer_conditionsInTrackerAlignmentErrorExtendedRcd = cms.ESPrefer("PoolDBESSource", "conditionsInTrackerAlignmentErrorExtendedRcd")
+
+  process.prefer_conditionsInTrackerAlignmentErrorExtendedRcd = cms.ESPrefer("PoolDBESSource", "conditionsInTrackerAlignmentErrorExtendedRcd")
 
 
 # Setup track refitter
