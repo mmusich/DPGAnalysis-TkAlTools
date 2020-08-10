@@ -92,6 +92,7 @@ class JetHTAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
       double minVtxNdf_;
       double minVtxWgt_;
 
+      std::vector<double> profilePtBorders_;
       std::vector<int> iovList_;
 
       edm::Service<TFileService> outfile_;
@@ -129,6 +130,7 @@ JetHTAnalyzer::JetHTAnalyzer(const edm::ParameterSet& iConfig) :
   printTriggerTable_(iConfig.getUntrackedParameter<int>("printTriggerTable")), 
   minVtxNdf_        (iConfig.getUntrackedParameter<double>("minVertexNdf")), 
   minVtxWgt_ (iConfig.getUntrackedParameter<double>("minVertexMeanWeight")),
+  profilePtBorders_ (iConfig.getUntrackedParameter<std::vector<double>>("profilePtBorders")),
   iovList_ (iConfig.getUntrackedParameter<std::vector<int>>("iovList"))
 {
    //now do what ever initialization is needed
@@ -256,6 +258,13 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       mon.fillProfile("dxyErrVsEta","all",tracketa,dxy_err,1.);
       mon.fillProfile("dzErrVsEta" ,"all",tracketa,dz_err,1.);
 
+      // Integrated pT bins
+      for(std::vector<double>::size_type i = 0; i < profilePtBorders_.size(); i++){
+        if(trackpt < profilePtBorders_.at(i)) break;
+        mon.fillProfile("dxyErrVsPtWide","all",i,dxy_err,1.);
+        mon.fillProfile("dzErrVsPtWide" ,"all",i,dz_err,1.);
+      }
+
       // Fill IOV specific histograms
       mon.fillHisto("dxy",iovString,dxyRes,1.);
       mon.fillHisto("dz",iovString,dzRes,1.);
@@ -271,6 +280,13 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       mon.fillProfile("dxyErrVsEta",iovString,tracketa,dxy_err,1.);
       mon.fillProfile("dzErrVsEta" ,iovString,tracketa,dz_err,1.);
 
+      // Integrated pT bins
+      for(std::vector<double>::size_type i = 0; i < profilePtBorders_.size(); i++){
+        if(trackpt < profilePtBorders_.at(i)) break;
+        mon.fillProfile("dxyErrVsPtWide",iovString,i,dxy_err,1.);
+        mon.fillProfile("dzErrVsPtWide" ,iovString,i,dz_err,1.);
+      }
+
       if(std::abs(tracketa)<1.){
 	mon.fillHisto("dxy","central",dxyRes,1.);
 	mon.fillHisto("dz","central",dzRes,1.);
@@ -282,6 +298,13 @@ JetHTAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
         mon.fillProfile("dxyErrVsPhi","central",trackphi,dxy_err,1.);
         mon.fillProfile("dzErrVsPhi" ,"central",trackphi,dz_err,1.);
+
+        // Integrated pT bins
+        for(std::vector<double>::size_type i = 0; i < profilePtBorders_.size(); i++){
+          if(trackpt < profilePtBorders_.at(i)) break;
+          mon.fillProfile("dxyErrVsPtWide","central",i,dxy_err,1.);
+          mon.fillProfile("dzErrVsPtWide" ,"central",i,dz_err,1.);
+        }
       }     
       
     }// loop on tracks in vertex
@@ -319,6 +342,11 @@ JetHTAnalyzer::beginJob()
   mon.addHistogram( new TProfile( "dxyErrVsEta",";track #eta;d_{xy} error",100,-2.5,2.5,0.,100.));
   mon.addHistogram( new TProfile( "dzErrVsEta" ,";track #eta;d_{z} error" ,100,-2.5,2.5,0.,100.));
     
+  // Variable size histogram depending on the given pT bin borders
+  int nBins = profilePtBorders_.size();
+  mon.addHistogram( new TProfile( "dxyErrVsPtWide", ";track p_{T} wide bin;d_{xy} error", nBins, -0.5, nBins-0.5, 0.0, 100.0));
+  mon.addHistogram( new TProfile( "dzErrVsPtWide", ";track p_{T} wide bin;d_{z} error", nBins, -0.5, nBins-0.5, 0.0, 100.0));
+
 }
 
 // ------------ method called once each job just after ending the event loop  ------------

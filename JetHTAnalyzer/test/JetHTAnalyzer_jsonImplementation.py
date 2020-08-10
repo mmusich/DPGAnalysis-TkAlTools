@@ -31,10 +31,12 @@ iovListList = configuration["jetht"]["iovList"]
 globalTag = str(configuration["jetht"]["globalTag"])
 pixelTemplate = str(configuration["jetht"]["SiPixelTemplateDBObjectRecord"])
 trackerAlignment = str(configuration["jetht"]["TrackerAlignmentRcd"])
+alignmentFile = str(configuration["jetht"]["TrackerAlignmentRcdFile"])
 trackerAlignmentError = str(configuration["jetht"]["TrackerAlignmentErrorExtendedRcd"])
 alignmentErrorFile = str(configuration["jetht"]["TrackerAlignmentErrorFile"])
 surfaceDeformation = str(configuration["jetht"]["TrackerSurfaceDeformationRcd"])
 trackCollection = configuration["jetht"]["trackCollection"]
+ptBorders = configuration["jetht"]["profilePtBorders"]
 
 ###################################################################
 # Messages
@@ -55,11 +57,13 @@ process.load('TrackingTools.TransientTrack.TransientTrackBuilder_cfi')
 
 if useMC:
   process.source = cms.Source("PoolSource",
-                              fileNames = cms.untracked.vstring('root://xrootd-cms.infn.it//store/mc/RunIIWinter19PFCalibDRPremix/QCD_Pt_15to30_TuneCP5_13TeV_pythia8/ALCARECO/TkAlMinBias-2017Conditions_105X_mc2017_realistic_v5-v1/250000/134A5981-A7F5-AF49-9288-A99820BBEEE0.root')
+#                              fileNames = cms.untracked.vstring('root://xrootd-cms.infn.it//store/mc/RunIIWinter19PFCalibDRPremix/QCD_Pt_15to30_TuneCP5_13TeV_pythia8/ALCARECO/TkAlMinBias-2017Conditions_105X_mc2017_realistic_v5-v1/250000/134A5981-A7F5-AF49-9288-A99820BBEEE0.root') # A file from original analysis
+                              fileNames = cms.untracked.vstring('root://xrootd-cms.infn.it//store/mc/RunIIWinter19PFCalibDRPremix/QCD_Pt_15to30_TuneCP5_13TeV_pythia8/ALCARECO/TkAlMinBias-2016Conditions_newPixCond_105X_mcRun2_asymptotic_newPixCond_v2-v1/270000/34065C51-AD16-9049-BB08-FAF13D31C24F.root')
                               )
 else:
   process.source = cms.Source("PoolSource",
-                              fileNames = cms.untracked.vstring('root://cmsxrootd.fnal.gov//store/user/jviinika/TkAlJetHTReconstruction_Run2017ABCDEF-v1_10keventPerIov/TrackAlignment_jetHTreconstruction/crab_TkAlJetHTReconstruction_Run2017ABCDEF-v1_10keventPerIov/190305_003651/0000/TkAlJetHT_2.root')
+#                              fileNames = cms.untracked.vstring('root://cmsxrootd.fnal.gov//store/user/jviinika/TkAlJetHTReconstruction_Run2017ABCDEF-v1_10keventPerIov/TrackAlignment_jetHTreconstruction/crab_TkAlJetHTReconstruction_Run2017ABCDEF-v1_10keventPerIov/190305_003651/0000/TkAlJetHT_2.root') # A file from original analysis
+                              fileNames = cms.untracked.vstring('root://cmsxrootd.fnal.gov//store/data/Run2016G/JetHT/ALCARECO/TkAlMinBias-21Feb2020_UL2016-v1/50000/C5106205-F3B6-7A4A-831E-4BE53350E9DF.root') # A file from 2016 JetHT file in DESY
 
                               )
 
@@ -97,6 +101,17 @@ if not (trackerAlignment == "nothing" or trackerAlignment == ""):
       )
   process.prefer_conditionsInTrackerAlignmentRcd = cms.ESPrefer("PoolDBESSource", "conditionsInTrackerAlignmentRcd")
 
+# If the reference to the database is not provided, check if a database file is provided
+elif not (alignmentFile == "nothing" or alignmentFile == ""):
+  process.conditionsInTrackerAlignmentRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
+       connect = cms.string("sqlite_file:" + alignmentFile),
+       toGet = cms.VPSet(cms.PSet(record = cms.string('TrackerAlignmentRcd'),
+                                 tag = cms.string('Alignments')
+                                 )
+                        )
+      )
+  process.prefer_conditionsInTrackerAlignmentRcd = cms.ESPrefer("PoolDBESSource", "conditionsInTrackerAlignmentRcd")
+
 # If requested, read the tracker alignment error record
 if not (trackerAlignmentError == "nothing" or trackerAlignmentError == ""):
   process.conditionsInTrackerAlignmentErrorExtendedRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
@@ -108,7 +123,7 @@ if not (trackerAlignmentError == "nothing" or trackerAlignmentError == ""):
       )
   process.prefer_conditionsInTrackerAlignmentErrorExtendedRcd = cms.ESPrefer("PoolDBESSource", "conditionsInTrackerAlignmentErrorExtendedRcd")
 
-# If the reference to the databese is not provided, check if a database file is provided
+# If the reference to the database is not provided, check if a database file is provided
 elif not (alignmentErrorFile == "nothing" or alignmentErrorFile == ""):
   process.conditionsInTrackerAlignmentErrorExtendedRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
        connect = cms.string("sqlite_file:" + alignmentErrorFile),
@@ -156,6 +171,7 @@ process.jetHTAnalyzer = cms.EDAnalyzer('JetHTAnalyzer',
                                        printTriggerTable   = cms.untracked.int32(printTriggers),
                                        minVertexNdf        = cms.untracked.double(10.),
                                        minVertexMeanWeight = cms.untracked.double(0.5),
+                                       profilePtBorders = cms.untracked.vdouble(ptBorders),
                                        iovList = cms.untracked.vint32(iovListList)
                                        )
 
