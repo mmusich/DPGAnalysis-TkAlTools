@@ -1,0 +1,16 @@
+{
+    "jetht": {
+        "mc": true,
+        "globalTag": "105X_mcRun2_asymptotic_newPixCond_v2",
+        "trackCollection": "ALCARECOTkAlMinBias",
+        "SiPixelTemplateDBObjectRecord": "nothing",
+        "TrackerAlignmentRcd": "nothing",
+        "TrackerAlignmentRcdFile": "alignments_MP3298.db",
+        "TrackerAlignmentErrorExtendedRcd": "nothing",
+        "TrackerAlignmentErrorFile": "nothing",
+        "TrackerSurfaceDeformationRcd": "nothing",
+        "printTriggers": false,
+        "profilePtBorders": [3,5,10,20,50,100],
+        "iovList": [0,10]
+    }
+}
