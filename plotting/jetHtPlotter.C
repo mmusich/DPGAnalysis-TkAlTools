@@ -51,12 +51,14 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   enum enumHistogramType{kDz, kDzError, kDxy, kDxyError, knHistogramTypes};
   TString histogramName[knHistogramTypes] = {"dz","dzerr","dxy","dxyerr"};
   TString histogramXaxis[knHistogramTypes] = {"d_{z} (#mum)","#sigma(d_{z}) (#mum)","d_{xy} (#mum)","#sigma(d_{xy}) (#mum)"};
-  enum enumProfileType{kDzErrorVsPt, kDzErrorVsPhi, kDzErrorVsEta, kDxyErrorVsPt, kDxyErrorVsPhi, kDxyErrorVsEta, knProfileTypes};
-  TString profileName[knProfileTypes] = {"dzErrVsPt","dzErrVsPhi","dzErrVsEta","dxyErrVsPt","dxyErrVsPhi","dxyErrVsEta"};
-  TString profileXaxis[knProfileTypes] = {"p_{T} (GeV)","#varphi","#eta","p_{T} (GeV)","#varphi","#eta"};
-  TString profileYaxis[knProfileTypes] = {"d_{z}","d_{z}","d_{z}","d_{xy}","d_{xy}","d_{xy}"};
+  enum enumProfileType{kDzErrorVsPt, kDzErrorVsPhi, kDzErrorVsEta, kDxyErrorVsPt, kDxyErrorVsPhi, kDxyErrorVsEta, kDzErrorVsPtWide, kDxyErrorVsPtWide, knProfileTypes};
+  enum enumTrendType{kDzErrorTrend, kDxyErrorTrend, knTrendTypes};
+  TString profileName[knProfileTypes] = {"dzErrVsPt", "dzErrVsPhi", "dzErrVsEta", "dxyErrVsPt", "dxyErrVsPhi", "dxyErrVsEta", "dzErrVsPtWide", "dxyErrVsPtWide"};
+  TString profileXaxis[knProfileTypes] = {"p_{T} (GeV)","#varphi","#eta","p_{T} (GeV)","#varphi","#eta", "p_{T} bin", "p_{T} bin"};
+  TString profileYaxis[knProfileTypes] = {"d_{z}","d_{z}","d_{z}","d_{xy}","d_{xy}","d_{xy}","d_{z}","d_{xy}"};
   bool drawHistogram[knHistogramTypes];
   bool drawProfile[knProfileTypes];
+  bool drawTrend[knTrendTypes];
   
   bool drawTrackQA = false;             // Draw track and vertex QA figures
   drawHistogram[kDz] = false;           // Draw the dz histograms
@@ -64,21 +66,30 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   drawProfile[kDzErrorVsPt] = true;    // Draw mean dz error as a function of pT
   drawProfile[kDzErrorVsPhi] = true;   // Draw mean dz error as a function of phi
   drawProfile[kDzErrorVsEta] = true;   // Draw mean dz error as a function of eta
+  drawProfile[kDzErrorVsPtWide] = false;   // Draw mean dz error in wide pT bins
   drawHistogram[kDxy] = false;          // Draw the dxy histograms
   drawHistogram[kDxyError] = false;     // Draw the dxy error histograms
   drawProfile[kDxyErrorVsPt] = true;   // Draw the dxy error as a function of pT
   drawProfile[kDxyErrorVsPhi] = true;  // Draw the dxy error as a function of phi
   drawProfile[kDxyErrorVsEta] = true;  // Draw the dxy error as a function of eta
+  drawProfile[kDxyErrorVsPtWide] = false;   // Draw mean dxy error in wide pT bins
+  drawTrend[kDzErrorTrend] = true;     // Draw the trend plots for dz errors
+  drawTrend[kDxyErrorTrend] = true;    // Draw the trend plots for dxy errors
+  
+  bool drawProfilesForEachIOV = false;  // True = Draw profile plots for every IOV. False = only draw average over all runs
   
   int colors[] = {kRed,kMagenta,kCyan,kGreen+3,kViolet+3,kOrange,kPink-7,kSpring+3,kAzure-7};
   int nIovInOnePlot = 1;  // Define how many iov:s are drawn to the same plot
   
-  double profileZoomLow[knProfileTypes] = {25,30,30,10,30,30};
-  double profileZoomHigh[knProfileTypes] = {55,80,100,35,80,80};
+  double profileZoomLow[knProfileTypes] = {25,30,30,10,30,30,25,10};
+  double profileZoomHigh[knProfileTypes] = {55,80,100,35,80,80,80,80};
+  
+  const int nWidePtBins = 6;
+  double widePtBinBorders[nWidePtBins] = {3,5,10,20,50,100};
   
   bool normalizeQAplots = true;
-  bool saveFigures = true;
-  const char *saveComment = "_ulv2VsMCulv2VsMCmp3149VsMCmean";
+  bool saveFigures = false;
+  const char *saveComment = "_testest";
   
   int compareFiles = 1;
   if(!comparisonFileName.EqualTo("")) compareFiles++;
@@ -86,7 +97,7 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   if(!comparisonFileName3.EqualTo("")) compareFiles++;
   
   // Prepare an IOV list that can be used with the slide generation script
-  bool makeIovListForSlides = true;
+  bool makeIovListForSlides = false;
   const char *iovListForSlides = "iovListForSlides.txt";
   
   // Helper variable to ensure that each IOV is added exactly once to the list
@@ -100,9 +111,9 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   
   // Text written to the legend for each file
   TString legendComment[4];
-  legendComment[0] = "MC ULv2";
-  legendComment[1] = "Data ULv2";
-  legendComment[2] = "MC mp3149";
+  legendComment[0] = "Prompt";
+  legendComment[1] = "ReReco";
+  legendComment[2] = "UltraLegacy";
   legendComment[3] = "MC mean";
   
   // ======================================================
@@ -155,6 +166,7 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   TH1D *hTrackPhi[4];
   TH1D *jetHtHistograms[4][knHistogramTypes][nIov];
   TProfile *jetHtProfiles[4][knProfileTypes][nIov];
+  TGraphErrors *gBigTrend[4][knTrendTypes][nWidePtBins];
   int legendSplitter = 0;
   
   // Initialize everything to NULL
@@ -172,6 +184,11 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
         jetHtProfiles[iFile][iProfileType][iIov] = NULL;
       } // profile type loop
     } // iov loop for reading histograms from file
+    for(int iTrend = 0; iTrend < knTrendTypes; iTrend++){
+      for(int iWidePt = 0; iWidePt < nWidePtBins; iWidePt++){
+        gBigTrend[iFile][iTrend][iWidePt] = NULL;
+      } // Trend loop
+    } // Wide pT bin loop
   } // file loop
   
   // Read the histograms from the file
@@ -188,12 +205,58 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
         } // if for drawing histogram
       } // histogram type loop
       for(int iProfileType = 0; iProfileType < knProfileTypes; iProfileType++){
-        if(drawProfile[iProfileType]){
+        if(drawProfile[iProfileType] || (drawTrend[kDzErrorTrend] && iProfileType == kDzErrorVsPtWide) || (drawTrend[kDxyErrorTrend] && iProfileType == kDxyErrorVsPtWide)){
           jetHtProfiles[iFile][iProfileType][iIov] = (TProfile*) inputFile[iFile]->Get(Form("jetHTAnalyzer/%s_%s",iovNames.at(iIov).Data(),profileName[iProfileType].Data()));
         } // if for drawing profile
       } // profile type loop
     } // iov loop for reading histograms from file
   } // Loop over files
+  
+  // Collect the information for the trend graphs
+  // TODO: Integrated luminosity for x-axis. The width of the bin should correspond to the luminosity recorded in that run
+  const int nRuns = iovVector.size()-1;
+  double yValueDz[nRuns];
+  double yErrorDz[nRuns];
+  double yValueDxy[nRuns];
+  double yErrorDxy[nRuns];
+  double xValue[nRuns];
+  double xError[nRuns];
+  if(drawTrend[kDzErrorTrend] || drawTrend[kDxyErrorTrend]){
+    for(int iFile = 0; iFile < compareFiles; iFile++){
+      for(int iWidePt = 0; iWidePt < nWidePtBins; iWidePt++){
+        for(int iRun = 0; iRun < nRuns; iRun++){
+          xValue[iRun] = iRun;
+          xError[iRun] = 0;
+          if(jetHtProfiles[iFile][kDzErrorVsPtWide][iRun] == NULL){
+            yValueDz[iRun] = 0;
+            yErrorDz[iRun] = 0;
+          } else {
+            yValueDz[iRun] = jetHtProfiles[iFile][kDzErrorVsPtWide][iRun]->GetBinContent(iWidePt+1);
+            yErrorDz[iRun] = jetHtProfiles[iFile][kDzErrorVsPtWide][iRun]->GetBinError(iWidePt+1);
+          }
+          if(jetHtProfiles[iFile][kDxyErrorVsPtWide][iRun] == NULL){
+            yValueDxy[iRun] = 0;
+            yErrorDxy[iRun] = 0;
+          } else {
+            yValueDxy[iRun] = jetHtProfiles[iFile][kDxyErrorVsPtWide][iRun]->GetBinContent(iWidePt+1);
+            yErrorDxy[iRun] = jetHtProfiles[iFile][kDxyErrorVsPtWide][iRun]->GetBinError(iWidePt+1);
+          }
+        } // Run loop
+        
+        gBigTrend[iFile][kDzErrorTrend][iWidePt] = new TGraphErrors(nRuns, xValue, yValueDz, xError, yErrorDz);
+        gBigTrend[iFile][kDxyErrorTrend][iWidePt] = new TGraphErrors(nRuns, xValue, yValueDxy, xError, yErrorDxy);
+        
+        // Make the labels in the x-axis reflect run numbers
+//        for(int iTrend = 0; iTrend < knTrendTypes; iTrend++){
+//          for(int iRun = 0; iRun < nRuns; iRun++){
+//            gBigTrend[iFile][iTrend][iWidePt]->GetXaxis()->SetBinLabel(iRun+1,Form("%d",iovVector.at(iRun)));
+//          } // Run loop
+//          gBigTrend[iFile][iTrend][iWidePt]->GetXaxis()->SetNdivisions(505);
+//        } // Trend loop
+        
+      } // Wide pT bin loop
+    } // File loop
+  } // If for drawing trends
   
   JDrawer *drawer = new JDrawer();
   TLegend *legend[2];
@@ -259,70 +322,72 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
       }
       
       // NOTE: IOV drawing only works for one or two files! Using more files will not give good results!!!
-      for(int iIov= 0; iIov < nIov-2; iIov = iIov + nIovInOnePlot){
-        
-        noIovFound = true;
-        
-        // Set up the IOV:s to be drawn to the current plot
-        for(int iSamePlot = 0; iSamePlot < nIovInOnePlot; iSamePlot++){
-          if(iIov + iSamePlot >= nIov - 2) break; // Do not draw again all or central references
-          if(jetHtProfiles[0][iProfileType][iIov+iSamePlot] != NULL){
-            jetHtProfiles[0][iProfileType][iIov+iSamePlot]->SetLineColor(colors[iSamePlot]);
-            jetHtProfiles[0][iProfileType][iIov+iSamePlot]->SetLineWidth(2);
-            noIovFound = false;
-          } else {
-            cout << "No histogram found for: " << Form("%s_%s",iovNames.at(iIov).Data(),profileName[iProfileType].Data()) << endl;
-          }
+      if(drawProfilesForEachIOV){
+        for(int iIov= 0; iIov < nIov-2; iIov = iIov + nIovInOnePlot){
           
-          if(jetHtProfiles[1][iProfileType][iIov+iSamePlot] != NULL){
-            jetHtProfiles[1][iProfileType][iIov+iSamePlot]->SetLineColor(colors[iSamePlot+nIovInOnePlot]);
-            jetHtProfiles[1][iProfileType][iIov+iSamePlot]->SetLineWidth(2);
-          }
-        }
-        
-        if(noIovFound) continue;
-        
-        // First, draw the reference over all runs to the plot
-        drawer->DrawHistogram(jetHtProfiles[0][iProfileType][nIov-2], profileXaxis[iProfileType], Form("#LT#sigma(%s)#GT (#mum)",profileYaxis[iProfileType].Data()));
-        
-        // Define a new legend for the plot
-        for(int iFile = 0; iFile < compareFiles; iFile++){
-          legend[iFile] = new TLegend(0.56-0.37*iFile,0.8-0.05*nIovInOnePlot,0.86-0.37*iFile,0.9);
-          legend[iFile]->SetFillStyle(0); legend[iFile]->SetBorderSize(0);
-          legend[iFile]->SetTextSize(0.05); legend[iFile]->SetTextFont(62);
-        }
-        legend[0]->AddEntry(jetHtProfiles[0][iProfileType][nIov-2],Form("All (%s)",legendComment[0].Data()),"l");
-        
-        if(jetHtProfiles[1][iProfileType][nIov-2] != NULL){
-          jetHtProfiles[1][iProfileType][nIov-2]->Draw("same");
-          legend[1]->AddEntry(jetHtProfiles[1][iProfileType][nIov-2],Form("All (%s)",legendComment[1].Data()),"l");
-        }
-        
-        // Draw defined number of different IOVs to the plot
-        for(int iFile = 0; iFile < compareFiles; iFile++){
+          noIovFound = true;
+          
+          // Set up the IOV:s to be drawn to the current plot
           for(int iSamePlot = 0; iSamePlot < nIovInOnePlot; iSamePlot++){
             if(iIov + iSamePlot >= nIov - 2) break; // Do not draw again all or central references
-            if(jetHtProfiles[iFile][iProfileType][iIov+iSamePlot] != NULL){
-              jetHtProfiles[iFile][iProfileType][iIov+iSamePlot]->Draw("same");
-              legend[iFile]->AddEntry(jetHtProfiles[iFile][iProfileType][iIov+iSamePlot],iovNames.at(iIov+iSamePlot),"l");
+            if(jetHtProfiles[0][iProfileType][iIov+iSamePlot] != NULL){
+              jetHtProfiles[0][iProfileType][iIov+iSamePlot]->SetLineColor(colors[iSamePlot]);
+              jetHtProfiles[0][iProfileType][iIov+iSamePlot]->SetLineWidth(2);
+              noIovFound = false;
+            } else {
+              cout << "No histogram found for: " << Form("%s_%s",iovNames.at(iIov).Data(),profileName[iProfileType].Data()) << endl;
+            }
+            
+            if(jetHtProfiles[1][iProfileType][iIov+iSamePlot] != NULL){
+              jetHtProfiles[1][iProfileType][iIov+iSamePlot]->SetLineColor(colors[iSamePlot+nIovInOnePlot]);
+              jetHtProfiles[1][iProfileType][iIov+iSamePlot]->SetLineWidth(2);
             }
           }
-          legend[iFile]->Draw();
-        }
-        
-        
-        
-        // Save the figures
-        if(saveFigures){
-          gPad->GetCanvas()->SaveAs(Form("figures/%s%s_iov%d-%d.pdf", profileName[iProfileType].Data(), saveComment, iovVector.at(iIov),iovVector.at(std::min(iIov+nIovInOnePlot,nIov-2))-1));
-        }
-        
-        // Add the current IOV to the IOV list to be used with the slide generation script
-        if(makeIovListForSlides && (iProfileType == profileIndexForIovList)){
-          iovFileForSlides << Form("%d-%d",iovVector.at(iIov),iovVector.at(std::min(iIov+nIovInOnePlot,nIov-2))-1) << "\n";
-        }
-        
-      } // iov loop for drawing
+          
+          if(noIovFound) continue;
+          
+          // First, draw the reference over all runs to the plot
+          drawer->DrawHistogram(jetHtProfiles[0][iProfileType][nIov-2], profileXaxis[iProfileType], Form("#LT#sigma(%s)#GT (#mum)",profileYaxis[iProfileType].Data()));
+          
+          // Define a new legend for the plot
+          for(int iFile = 0; iFile < compareFiles; iFile++){
+            legend[iFile] = new TLegend(0.56-0.37*iFile,0.8-0.05*nIovInOnePlot,0.86-0.37*iFile,0.9);
+            legend[iFile]->SetFillStyle(0); legend[iFile]->SetBorderSize(0);
+            legend[iFile]->SetTextSize(0.05); legend[iFile]->SetTextFont(62);
+          }
+          legend[0]->AddEntry(jetHtProfiles[0][iProfileType][nIov-2],Form("All (%s)",legendComment[0].Data()),"l");
+          
+          if(jetHtProfiles[1][iProfileType][nIov-2] != NULL){
+            jetHtProfiles[1][iProfileType][nIov-2]->Draw("same");
+            legend[1]->AddEntry(jetHtProfiles[1][iProfileType][nIov-2],Form("All (%s)",legendComment[1].Data()),"l");
+          }
+          
+          // Draw defined number of different IOVs to the plot
+          for(int iFile = 0; iFile < compareFiles; iFile++){
+            for(int iSamePlot = 0; iSamePlot < nIovInOnePlot; iSamePlot++){
+              if(iIov + iSamePlot >= nIov - 2) break; // Do not draw again all or central references
+              if(jetHtProfiles[iFile][iProfileType][iIov+iSamePlot] != NULL){
+                jetHtProfiles[iFile][iProfileType][iIov+iSamePlot]->Draw("same");
+                legend[iFile]->AddEntry(jetHtProfiles[iFile][iProfileType][iIov+iSamePlot],iovNames.at(iIov+iSamePlot),"l");
+              }
+            }
+            legend[iFile]->Draw();
+          }
+          
+          
+          
+          // Save the figures
+          if(saveFigures){
+            gPad->GetCanvas()->SaveAs(Form("figures/%s%s_iov%d-%d.pdf", profileName[iProfileType].Data(), saveComment, iovVector.at(iIov),iovVector.at(std::min(iIov+nIovInOnePlot,nIov-2))-1));
+          }
+          
+          // Add the current IOV to the IOV list to be used with the slide generation script
+          if(makeIovListForSlides && (iProfileType == profileIndexForIovList)){
+            iovFileForSlides << Form("%d-%d",iovVector.at(iIov),iovVector.at(std::min(iIov+nIovInOnePlot,nIov-2))-1) << "\n";
+          }
+          
+        } // iov loop for drawing
+      } // if for drawing profiles for each IOV
       
       
       // After all IOV:s, draw summary with all and central curves
@@ -380,5 +445,37 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   
   // Close the output file
   if(makeIovListForSlides) iovFileForSlides.close();
+  
+  // Trend plots
+  TLegend *trendLegend;
+  drawer->SetCanvasSize(1000,400);
+  double trendColors[] = {kBlack, kBlue, kRed, kGreen+4};
+  for(int iTrend = 0; iTrend < knTrendTypes; iTrend++){
+    if(!drawTrend[iTrend]) continue;
+    for(int iWidePt = 0; iWidePt < nWidePtBins; iWidePt++){
+      
+      trendLegend = new TLegend(0.65,0.6,0.9,0.9);
+      trendLegend->SetFillStyle(0); trendLegend->SetBorderSize(0);
+      trendLegend->SetTextSize(0.05); trendLegend->SetTextFont(62);
+      trendLegend->SetHeader(Form("%s error trend for p_{T} > %.0f GeV", profileYaxis[iTrend+6].Data(), widePtBinBorders[iWidePt]));
+      
+      for(int iFile = 0; iFile < compareFiles; iFile++){
+        gBigTrend[iFile][iTrend][iWidePt]->SetMarkerColor(trendColors[iFile]);
+        gBigTrend[iFile][iTrend][iWidePt]->SetMarkerStyle(kFullCircle);
+        
+        if(iFile == 0){
+          drawer->DrawGraphCustomAxes(gBigTrend[iFile][iTrend][iWidePt], 0, nRuns, 10, 80, "Run index", Form("#LT #sigma(%s) #GT", profileYaxis[iTrend+6].Data()), " ", "ap");
+        } else {
+          gBigTrend[iFile][iTrend][iWidePt]->Draw("p,same");
+        }
+        
+        trendLegend->AddEntry(gBigTrend[iFile][iTrend][iWidePt], legendComment[iFile].Data(), "p");
+        
+      } // File loop
+      
+      trendLegend->Draw();
+      
+    } // Wide pT loop
+  } // Trend type loop
   
 }

@@ -11,6 +11,8 @@
 #include <TPad.h>
 #include <TString.h>
 #include <TH1.h>
+#include <TF1.h>
+#include <TAxis.h>
 #include <TGraph.h>
 #include <TLegend.h>
 
@@ -82,47 +84,84 @@ private:
   int fNameIndex;             // Names for canvases and pads are generated using this index. Static so that unique naming is ensured
                               // This used to be static, but for some reason does not compile if defined as static. Should work like this also though
                               // Remember: static means that only one fNameIndex is used by all the JDrawers that are created in the code
+
   /*
-   * Trim the style of the histogram using the defined style values
+   * Trim the styles of given axes
+   *
+   * TAxis *xAxis = The styled x-axis
+   * TAxis *yAxis = The styled y-axis
+   * TAxis *zAxis = The styled z-axis
+   * TString xtit = Title of the x-axis
+   * TString ytit = Title of the y-axis
+   */
+  void SetAxisStyles(TAxis *xAxis, TAxis *yAxis, TAxis *zAxis, TString xtit, TString ytit){
+    
+    xAxis->CenterTitle(1);    // Axis titles are centered
+    yAxis->CenterTitle(1);    // Axis titles are centered
+    if(zAxis) zAxis->CenterTitle(1);    // Axis titles are centered
+    
+    xAxis->SetTitleOffset(fTitleOffsetX); // Give a small offset to the title so that it does overlap with axis
+    yAxis->SetTitleOffset(fTitleOffsetY); // Give a small offset to the title so that it does overlap with axis
+    if(zAxis) zAxis->SetTitleOffset(fTitleOffsetZ); // Give a small offset to the title so that it does overlap with axis
+    
+    xAxis->SetTitleSize(fTitleSizeX); // Define the size of the title
+    yAxis->SetTitleSize(fTitleSizeY); // Define the size of the title
+    if(zAxis) zAxis->SetTitleSize(fTitleSizeZ); // Define the size of the title
+    
+    xAxis->SetLabelOffset(fLabelOffsetX); // Give a small offset to the label so that it does overlap with axis
+    yAxis->SetLabelOffset(fLabelOffsetY); // Give a small offset to the label so that it does overlap with axis
+    if(zAxis) zAxis->SetLabelOffset(fLabelOffsetZ); // Give a small offset to the label so that it does overlap with axis
+    
+    xAxis->SetLabelSize(fLabelSizeX); // Define the sixe of the label
+    yAxis->SetLabelSize(fLabelSizeY); // Define the sixe of the label
+    if(zAxis) zAxis->SetLabelSize(fLabelSizeZ); // Define the sixe of the label
+    
+    xAxis->SetNdivisions(fDivisionsX); // Set the number of division markers
+    yAxis->SetNdivisions(fDivisionsY); // Set the number of division markers
+    
+    xAxis->SetTitle(xtit); // Set the axis title
+    yAxis->SetTitle(ytit); // Set the axis title
+    
+    xAxis->SetLabelFont(fFont); // Set the label font
+    yAxis->SetLabelFont(fFont); // Set the label font
+    if(zAxis) zAxis->SetLabelFont(fFont); // Set the label font
+    xAxis->SetTitleFont(fFont); // Set the title font
+    yAxis->SetTitleFont(fFont); // Set the title font
+    if(zAxis) zAxis->SetTitleFont(fFont); // Set the title font
+  }
+  
+  /*
+   * Trim the style of a histogram using the defined style values
    *
    * TH1 *hid = Histogram which is styled
    * TString xtit = Title of the x-axis
    * TString ytit = Title of the y-axis
    */
   void SetHistogramStyle(TH1 *hid, TString xtit, TString ytit){
-    
-    hid->GetXaxis()->CenterTitle(1);    // Axis titles are centered
-    hid->GetYaxis()->CenterTitle(1);    // Axis titles are centered
-    hid->GetZaxis()->CenterTitle(1);    // Axis titles are centered
-    
-    hid->GetXaxis()->SetTitleOffset(fTitleOffsetX); // Give a small offset to the title so that it does overlap with axis
-    hid->GetYaxis()->SetTitleOffset(fTitleOffsetY); // Give a small offset to the title so that it does overlap with axis
-    hid->GetZaxis()->SetTitleOffset(fTitleOffsetZ); // Give a small offset to the title so that it does overlap with axis
-    
-    hid->GetXaxis()->SetTitleSize(fTitleSizeX); // Define the size of the title
-    hid->GetYaxis()->SetTitleSize(fTitleSizeY); // Define the size of the title
-    hid->GetZaxis()->SetTitleSize(fTitleSizeZ); // Define the size of the title
-    
-    hid->GetXaxis()->SetLabelOffset(fLabelOffsetX); // Give a small offset to the label so that it does overlap with axis
-    hid->GetYaxis()->SetLabelOffset(fLabelOffsetY); // Give a small offset to the label so that it does overlap with axis
-    hid->GetZaxis()->SetLabelOffset(fLabelOffsetZ); // Give a small offset to the label so that it does overlap with axis
-    
-    hid->GetXaxis()->SetLabelSize(fLabelSizeX); // Define the sixe of the label
-    hid->GetYaxis()->SetLabelSize(fLabelSizeY); // Define the sixe of the label
-    hid->GetZaxis()->SetLabelSize(fLabelSizeZ); // Define the sixe of the label
-    
-    hid->GetXaxis()->SetNdivisions(fDivisionsX); // Set the number of division markers
-    hid->GetYaxis()->SetNdivisions(fDivisionsY); // Set the number of division markers
-    
-    hid->GetXaxis()->SetTitle(xtit); // Set the axis title
-    hid->GetYaxis()->SetTitle(ytit); // Set the axis title
-    
-    hid->GetXaxis()->SetLabelFont(fFont); // Set the label font
-    hid->GetYaxis()->SetLabelFont(fFont); // Set the label font
-    hid->GetZaxis()->SetLabelFont(fFont); // Set the label font
-    hid->GetXaxis()->SetTitleFont(fFont); // Set the title font
-    hid->GetYaxis()->SetTitleFont(fFont); // Set the title font
-    hid->GetZaxis()->SetTitleFont(fFont); // Set the title font
+    SetAxisStyles(hid->GetXaxis(), hid->GetYaxis(), hid->GetZaxis(), xtit, ytit);
+  }
+  
+  
+  /*
+   * Trim the style of a function using the defined style values
+   *
+   * TF1 *hid = Function which is styled
+   * TString xtit = Title of the x-axis
+   * TString ytit = Title of the y-axis
+   */
+  void SetFunctionStyle(TF1 *hid, TString xtit, TString ytit){
+    SetAxisStyles(hid->GetXaxis(), hid->GetYaxis(), hid->GetZaxis(), xtit, ytit);
+  }
+  
+  /*
+   * Trim the style of a graph using the defined style values
+   *
+   * TGraph *hid = Histogram which is styled
+   * TString xtit = Title of the x-axis
+   * TString ytit = Title of the y-axis
+   */
+  void SetGraphStyle(TGraph *hid, TString xtit, TString ytit){
+    SetAxisStyles(hid->GetXaxis(), hid->GetYaxis(), NULL, xtit, ytit);
   }
   
   /*
@@ -332,6 +371,68 @@ public:
     CreateCanvas(xlow,xhigh,ylow,yhigh,xTitle,yTitle,title);
     graph->Draw(drawOption);
     
+  }
+  
+  /*
+   *  Draw a graph to a canvas. Notice that with custom axes the option "a" should be given for the first graph in each canvas.
+   *
+   *  TGraph *graph = graph to be drawn
+   *  double xlow = lowest x-axis value drawn
+   *  double xhigh = highest x-axis value drawn
+   *  double ylow = lowest y-axis value drawn
+   *  double yhigh = highest y-axis value drawn
+   *  char *xTitle = title for the x-axis
+   *  char *yTitle = title for the y-axis
+   *  char *title = title of the histogram
+   *  char *drawOption = options for drawing given in root documentation
+   */
+  void DrawGraphCustomAxes(TGraph *graph, double xlow, double xhigh, double ylow, double yhigh, const char *xTitle = "", const char *yTitle = "", const char *title = "", const char *drawOption = ""){
+    
+    // If no titles are given, keep the original ones
+    if(strcmp(xTitle, "") == 0) xTitle = graph->GetXaxis()->GetTitle(); // To compare char*:s we need to use strcmp function provided by <cstring> library
+    if(strcmp(yTitle, "") == 0) yTitle = graph->GetYaxis()->GetTitle();
+    if(strcmp(title, "") == 0) title = graph->GetTitle();
+    
+    // Set up the histogram and draw it to canvas
+    CreateCanvas();
+    graph->SetTitle(title);
+    graph->GetXaxis()->SetRangeUser(xlow,xhigh);
+    graph->GetYaxis()->SetRangeUser(ylow,yhigh);
+    SetGraphStyle(graph, xTitle, yTitle);
+    graph->Draw(drawOption);
+    
+  }
+  
+  /*
+   *  Draw a function to a canvas
+   *
+   *  TF1 *myFun = histogram to be drawn
+   *  char *xTitle = title for the x-axis
+   *  char *yTitle = title for the y-axis
+   *  char *title = title of the histogram
+   *  char *drawOption = options for drawing given in root documentation
+   */
+  void DrawFunction(TF1 *myFun, const char *xTitle, const char *yTitle, const char *title = "", const char *drawOption = ""){
+    // If no titles are given, keep the original ones
+    if(strcmp(xTitle, "") == 0) xTitle = myFun->GetXaxis()->GetTitle(); // To compare char*:s we need to use strcmp function provided by <cstring> library
+    if(strcmp(yTitle, "") == 0) yTitle = myFun->GetYaxis()->GetTitle();
+    if(strcmp(title, "") == 0) title = myFun->GetTitle();
+    
+    // Set up the histogram and draw it to canvas
+    CreateCanvas();
+    myFun->SetTitle(title);
+    SetFunctionStyle(myFun, xTitle, yTitle);
+    myFun->Draw(drawOption);
+  }
+  
+  /*
+   * Draw histogram without changing the titles
+   *
+   *  TF1 *myFun = function to be drawn
+   *  char *drawOption = options for drawing given in root documentation
+   */
+  void DrawFunction(TF1* myFun, const char *drawOption = ""){
+    DrawFunction(myFun,"","","",drawOption);
   }
   
   /*
