@@ -2,7 +2,7 @@ from WMCore.Configuration import Configuration
 config = Configuration()
 
 inputList='jetHtFilesForMC2016_first50inEachPtHat.txt'
-jobTag='TkAlJetHTAnalysis_MC2016_globalTag_2020-08-10'
+jobTag='TkAlJetHTAnalysis_MC2016_globalTag_2020-08-11'
 
 config.section_("General")
 config.General.requestName = jobTag
@@ -16,13 +16,13 @@ config.JobType.psetName = 'JetHTAnalyzer_jsonImplementation.py'
 config.JobType.pyCfgParams = ['configurationFile=jethtConfigurationMC2016_globalTag.json']
 config.JobType.inputFiles = ['jethtConfigurationMC2016_globalTag.json']
 config.JobType.numCores = 1
-config.JobType.maxMemoryMB = 1800
+config.JobType.maxMemoryMB = 1200
 config.JobType.maxJobRuntimeMin = 1200
 
 config.section_("Data")
 config.Data.userInputFiles = open(inputList).readlines()
 config.Data.splitting = 'FileBased'
-config.Data.unitsPerJob = 5
+config.Data.unitsPerJob = 3
 config.Data.totalUnits = len(config.Data.userInputFiles)
 config.Data.outputPrimaryDataset = 'TrackAlignment_jetHTanalysis'
 config.Data.outLFNDirBase = '/store/user/jviinika/' + config.General.requestName

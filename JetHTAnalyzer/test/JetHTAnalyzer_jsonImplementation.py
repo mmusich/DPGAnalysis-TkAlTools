@@ -35,6 +35,7 @@ alignmentFile = str(configuration["jetht"]["TrackerAlignmentRcdFile"])
 trackerAlignmentError = str(configuration["jetht"]["TrackerAlignmentErrorExtendedRcd"])
 alignmentErrorFile = str(configuration["jetht"]["TrackerAlignmentErrorFile"])
 surfaceDeformation = str(configuration["jetht"]["TrackerSurfaceDeformationRcd"])
+beamSpot = str(configuration["jetht"]["BeamSpotObjectsRcd"])
 trackCollection = configuration["jetht"]["trackCollection"]
 ptBorders = configuration["jetht"]["profilePtBorders"]
 
@@ -145,6 +146,17 @@ if not (surfaceDeformation == "nothing" or surfaceDeformation == ""):
       )
   process.prefer_conditionsInTrackerSurfaceDeformationRcd = cms.ESPrefer("PoolDBESSource", "conditionsInTrackerSurfaceDeformationRcd")
 
+# If requested, read the beam spot record
+if not (beamSpot == "nothing" or beamSpot == ""):
+
+  process.conditionsInBeamSpotObjectsRcd = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
+       connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+       toGet = cms.VPSet(cms.PSet(record = cms.string('BeamSpotObjectsRcd'),
+                                 tag = cms.string(beamSpot)
+                                 )
+                        )
+      )
+  process.prefer_conditionsInBeamSpotObjectsRcd = cms.ESPrefer("PoolDBESSource", "conditionsInBeamSpotObjectsRcd")
 
 # Setup track refitter
 process.load("RecoTracker.TrackProducer.TrackRefitters_cff")
