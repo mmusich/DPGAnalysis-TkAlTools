@@ -40,6 +40,143 @@ void drawSingleHistogram(TH1D *histogram[4], const char *saveName, bool saveFigu
 }
 
 /*
+ *  Construct vectors of ptHet files and the ptHat value in each of those files
+ *
+ *  Arguments:
+ *   const char* inputFile = File containing the list of ptHat separated files and ptHat bin in each file
+ *
+ *  return:
+ *   Tuple containing list of runs, luminosities, and histogram names within the validation files
+ */
+std::tuple<std::vector<std::string>, std::vector<int>> getPtHatFilesAndValues(const char* inputFile){
+  
+  // Create vectors for ptHat files and values
+  std::vector<std::string> ptHatFileList;
+  std::vector<int> ptHatList;
+  
+  // Helper variables to read the file
+  std::string lineInFile;
+  
+  // Open the input file for reading
+  std::ifstream ptHatFile(inputFile);
+  
+  // Go through the file line by line. Each line has one file and information about the ptHat in the file.
+  while(std::getline(ptHatFile, lineInFile))
+  {
+    
+    auto stringStream = std::istringstream{lineInFile};
+    auto wordString = std::string{};
+    
+    // Find the file name and ptHat in that file
+    stringStream >> wordString;
+    ptHatFileList.push_back(wordString);
+    stringStream >> wordString;
+    ptHatList.push_back(std::stoi(wordString));
+  }
+  
+  // After all the vectors are filled, return them
+  return std::make_tuple(ptHatFileList, ptHatList);
+  
+}
+
+/*
+ * Get a selected histogram combining different pThat bins
+ */
+TH1* getPtHatCombinedHistogram(std::vector<std::string> ptHatFiles, std::vector<int> ptHatValues, const char* histogramName){
+  
+  // Weight for bins:       30to50     50to80      80to120    120to170    170to300    300to470    470to600
+  double ptHatWeights[] = {138800000, 19110000,    2735000,    466200,     117200,      7763,      641.0,
+  //                       600to800   800to1000  1000to1400  1400to1800  1800to2400  2400to3200  3200toInf
+                            185.7,      32.02,      9.375 ,    0.8384,     0.1133,    0.006746,  0.0001623};
+  const int nPtHat = 14;
+  int ptHatBoundaries[] = {30, 50, 80, 120, 170, 300, 470, 600, 800, 1000, 1400, 1800, 2400, 3200};
+  
+  TFile *openFile = TFile::Open(ptHatFiles.at(0).data());
+  TH1* combinedHistogram = (TH1*) openFile->Get(histogramName)->Clone(Form("%sClone",histogramName));
+  TH1* currentHistogram;
+  combinedHistogram->Reset("ICES");
+  int ptHatIndex = -1;
+  
+  for(int iFile = 0; iFile < ptHatFiles.size(); iFile++){
+    
+    ptHatIndex = -1;
+    for(int iPtHat = 0; iPtHat < nPtHat; iPtHat++){
+      if(ptHatValues.at(iFile) == ptHatBoundaries[iPtHat]){
+        ptHatIndex = iPtHat;
+        break;
+      }
+    }
+    
+    if(ptHatIndex < 0){
+      cout << "Could not find pT hat boundary " << ptHatValues.at(iFile) << " for file " << ptHatFiles.at(iFile) << endl;
+      cout << "Please check your input! It needs to be in the form <fileName> <ptHatBoundary>" << endl;
+      return NULL;
+    }
+    
+    openFile = TFile::Open(ptHatFiles.at(iFile).data());
+    currentHistogram = (TH1*) openFile->Get(histogramName);
+    combinedHistogram->Add(currentHistogram,ptHatWeights[ptHatIndex]);
+    
+  }
+  
+  return combinedHistogram;
+  
+}
+
+/*
+ *  Construct vectors of runs, luminosities, and histogram names within the validation files from an input file
+ *  containing a list of runs and luminosities attached to each one
+ *
+ *  Arguments:
+ *   const char* inputFile = File containing the run and luminosity lists
+ *
+ *  return:
+ *   Tuple containing list of runs, luminosities, and histogram names within the validation files
+ */
+std::tuple<std::vector<int>, std::vector<double>, std::vector<TString>> getRunAndLumiLists(const char* inputFile){
+  
+  // Create vectors for each list
+  std::vector<int> iovVector;
+  std::vector<double> lumiPerIov;
+  std::vector<TString> iovNames;
+  
+  // Helper variables to read the file
+  std::string lineInFile;
+  int thisIov;
+  double thisLumi;
+  
+  // Load the iovList
+  std::ifstream iovList(inputFile);
+  
+  // Go through the file line by line. Each line has an IOV boundary and luminosity for this IOV.
+  while(std::getline(iovList, lineInFile))
+  {
+    
+    // Read the iov and luminosity from the file
+    std::istringstream lineStream(lineInFile);
+    lineStream >> thisIov;
+    lineStream >> thisLumi;
+    
+    // Push the extracted numbers to vectors
+    iovVector.push_back(thisIov);
+    lumiPerIov.push_back(thisLumi);
+  }
+
+  // Create names for the different IOV:s
+  for(std::vector<int>::size_type i = 1; i < iovVector.size(); i++){
+    iovNames.push_back(Form("iov%d-%d",iovVector.at(i-1),iovVector.at(i)-1));
+  }
+  
+  // Add the iov integrated histograms after the histograms per IOV
+  iovNames.push_back("all");
+  iovNames.push_back("central");
+  
+  // After all the vectors are filled, return them
+  return std::make_tuple(iovVector, lumiPerIov, iovNames);
+  
+}
+
+/*
  * Macro for plotting figures for the study of jet HT sample
  */
 void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root", TString comparisonFileName = "", TString comparisonFileName2 = "", TString comparisonFileName3 = ""){
@@ -56,6 +193,7 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   TString profileName[knProfileTypes] = {"dzErrVsPt", "dzErrVsPhi", "dzErrVsEta", "dxyErrVsPt", "dxyErrVsPhi", "dxyErrVsEta", "dzErrVsPtWide", "dxyErrVsPtWide"};
   TString profileXaxis[knProfileTypes] = {"p_{T} (GeV)","#varphi","#eta","p_{T} (GeV)","#varphi","#eta", "p_{T} bin", "p_{T} bin"};
   TString profileYaxis[knProfileTypes] = {"d_{z}","d_{z}","d_{z}","d_{xy}","d_{xy}","d_{xy}","d_{z}","d_{xy}"};
+  TString trendName[] = {"dzErr","dxyErr"};
   bool drawHistogram[knHistogramTypes];
   bool drawProfile[knProfileTypes];
   bool drawTrend[knTrendTypes];
@@ -78,18 +216,20 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   
   bool drawProfilesForEachIOV = false;  // True = Draw profile plots for every IOV. False = only draw average over all runs
   
-  int colors[] = {kRed,kMagenta,kCyan,kGreen+3,kViolet+3,kOrange,kPink-7,kSpring+3,kAzure-7};
+  int colors[] = {kRed,kGreen+3,kMagenta,kCyan,kViolet+3,kOrange,kPink-7,kSpring+3,kAzure-7};
   int nIovInOnePlot = 1;  // Define how many iov:s are drawn to the same plot
   
-  double profileZoomLow[knProfileTypes] = {25,30,30,10,30,30,25,10};
-  double profileZoomHigh[knProfileTypes] = {55,80,100,35,80,80,80,80};
+  double profileZoomLow[knProfileTypes] = {32,55,40,10,50,30,25,20};
+  double profileZoomHigh[knProfileTypes] = {62,80,100,40,70,90,90,80};
+  double trendZoomLow[knTrendTypes] = {20,10};
+  double trendZoomHigh[knTrendTypes] = {95,90};
   
   const int nWidePtBins = 6;
-  double widePtBinBorders[nWidePtBins] = {3,5,10,20,50,100};
+  int widePtBinBorders[nWidePtBins] = {3,5,10,20,50,100};
   
   bool normalizeQAplots = true;
   bool saveFigures = false;
-  const char *saveComment = "_testest";
+  const char *saveComment = "_dataComparison2017";
   
   int compareFiles = 1;
   if(!comparisonFileName.EqualTo("")) compareFiles++;
@@ -114,48 +254,62 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   legendComment[0] = "Prompt";
   legendComment[1] = "ReReco";
   legendComment[2] = "UltraLegacy";
-  legendComment[3] = "MC mean";
+  legendComment[3] = "Prompt + UL APEs";
+  
+  
+  const bool displayIOVinComment = false; // False: The comment is fully given by legend comment. True: IOV/all/central added to comment
+  
+  TString plotTitle = " ";  // Title given to the plot
   
   // ======================================================
   // ================ Configuration done ==================
   // ======================================================
   
-  // Open the input file
+  // ===============================================================
+  //   Read different ptHat files for combining those with weights
+  // ===============================================================
+  
+//  // Name of the file containing the ptHat file names
+//  const char *ptHatFileName = "ptHatFiles.txt";
+//
+//  // List for all the different ptHat files to be combined
+//  std::vector<std::string> ptHatFileList;
+//  std::vector<int> ptHatList;
+//
+//  std::tie(ptHatFileList, ptHatList) = getPtHatFilesAndValues(ptHatFileName);
+  
+  // ===============================================
+  //        Read the run and luminosity list
+  // ===============================================
+  
+  // Luminosity per run file
+  const char* iovAndLumiFile = "lumiList2017.txt";
+  
+  // Create a vector for a new iovList
+  std::vector<int> iovVector;
+  std::vector<double> lumiPerIov;
+  std::vector<TString> iovNames;
+  
+  std::tie(iovVector, lumiPerIov, iovNames) = getRunAndLumiLists(iovAndLumiFile);
+  
+  // ===============================================
+  //                IOV list for slides
+  // ===============================================
+  
+  // If we are preparing an iov list for slides, make a file for that
+  std::ofstream iovFileForSlides;
+  if(makeIovListForSlides) iovFileForSlides.open(iovListForSlides);
+  
+  // ===============================================
+  //   Create histograms and read them from a file
+  // ===============================================
+  
+  // Open the input files
   TFile *inputFile[4];
   inputFile[0] = TFile::Open(inputFileName);
   if(compareFiles > 1) inputFile[1] = TFile::Open(comparisonFileName);
   if(compareFiles > 2) inputFile[2] = TFile::Open(comparisonFileName2);
   if(compareFiles > 3) inputFile[3] = TFile::Open(comparisonFileName3);
-  
-  // Strings for reading a line from the file
-  std::string lineInFile;
-  
-  // Load the iovList
-  std::ifstream iovList("iovList.txt");
-  
-  // Create a vector for a new iovList
-  std::vector<int> iovVector;
-  std::vector<TString> iovNames;
-  
-  // Go through the file line by line. Each line has an iov boundary.
-  while(std::getline(iovList, lineInFile))
-  {
-    // Convert string to integer and put it to vector
-    iovVector.push_back(std::stoi(lineInFile));
-  }
-
-  // Create names for the different iov:s
-  for(std::vector<int>::size_type i = 1; i < iovVector.size(); i++){
-    iovNames.push_back(Form("iov%d-%d",iovVector.at(i-1),iovVector.at(i)-1));
-  }
-  
-  // Add the iov integrated histograms after the histograms per IOV
-  iovNames.push_back("all");
-  iovNames.push_back("central");
-  
-  // If we are preparing an iov list for slides, make a file for that
-  std::ofstream iovFileForSlides;
-  if(makeIovListForSlides) iovFileForSlides.open(iovListForSlides);
   
   // Define the histograms that will be read from the file
   const int nIov = iovNames.size();
@@ -221,6 +375,7 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   double yErrorDxy[nRuns];
   double xValue[nRuns];
   double xError[nRuns];
+  TString commentEntry = "";
   if(drawTrend[kDzErrorTrend] || drawTrend[kDxyErrorTrend]){
     for(int iFile = 0; iFile < compareFiles; iFile++){
       for(int iWidePt = 0; iWidePt < nWidePtBins; iWidePt++){
@@ -257,6 +412,10 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
       } // Wide pT bin loop
     } // File loop
   } // If for drawing trends
+  
+  // ===============================================
+  //                  Draw the plots
+  // ===============================================
   
   JDrawer *drawer = new JDrawer();
   TLegend *legend[2];
@@ -391,7 +550,7 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
       
       
       // After all IOV:s, draw summary with all and central curves
-      drawer->DrawHistogram(jetHtProfiles[0][iProfileType][nIov-2], profileXaxis[iProfileType], Form("#LT#sigma(%s)#GT (#mum)",profileYaxis[iProfileType].Data()));
+      drawer->DrawHistogram(jetHtProfiles[0][iProfileType][nIov-2], profileXaxis[iProfileType], Form("#LT#sigma(%s)#GT (#mum)",profileYaxis[iProfileType].Data()), plotTitle);
       
       // Add a reference to all runs in central eta range, except for plots as a function of eta
       // Only draw central histogram is comparing only 2 files
@@ -422,13 +581,23 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
         legend[iFile] = new TLegend(0.56-0.37*iFile,0.75,0.86-0.37*iFile,0.9);
         legend[iFile]->SetFillStyle(0); legend[iFile]->SetBorderSize(0);
         legend[iFile]->SetTextSize(0.05); legend[iFile]->SetTextFont(62);
-        legend[iFile]->AddEntry(jetHtProfiles[iFile][iProfileType][nIov-2],Form("All (%s)",legendComment[iFile].Data()),"l");
+        if(displayIOVinComment){
+          commentEntry = Form("All (%s)",legendComment[iFile].Data());
+        } else {
+          commentEntry = legendComment[iFile];
+        }
+        legend[iFile]->AddEntry(jetHtProfiles[iFile][iProfileType][nIov-2],commentEntry.Data(),"l");
         if(jetHtProfiles[iFile][iProfileType][nIov-1] != NULL && compareFiles < 3) legend[iFile]->AddEntry(jetHtProfiles[iFile][iProfileType][nIov-1],Form("Central (%s)",legendComment[iFile].Data()),"l");
       }
       
       if(compareFiles > 2){
         for(int iFile = 2; iFile < compareFiles; iFile++){
-          legend[iFile-2]->AddEntry(jetHtProfiles[iFile][iProfileType][nIov-2],Form("All (%s)",legendComment[iFile].Data()),"l");
+          if(displayIOVinComment){
+            commentEntry = Form("All (%s)",legendComment[iFile].Data());
+          } else {
+            commentEntry = legendComment[iFile];
+          }
+          legend[iFile-2]->AddEntry(jetHtProfiles[iFile][iProfileType][nIov-2],commentEntry.Data(),"l");
         }
       }
       
@@ -449,7 +618,7 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   // Trend plots
   TLegend *trendLegend;
   drawer->SetCanvasSize(1000,400);
-  double trendColors[] = {kBlack, kBlue, kRed, kGreen+4};
+  double trendColors[] = {kBlack, kBlue, kRed, kGreen+3};
   for(int iTrend = 0; iTrend < knTrendTypes; iTrend++){
     if(!drawTrend[iTrend]) continue;
     for(int iWidePt = 0; iWidePt < nWidePtBins; iWidePt++){
@@ -457,14 +626,14 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
       trendLegend = new TLegend(0.65,0.6,0.9,0.9);
       trendLegend->SetFillStyle(0); trendLegend->SetBorderSize(0);
       trendLegend->SetTextSize(0.05); trendLegend->SetTextFont(62);
-      trendLegend->SetHeader(Form("%s error trend for p_{T} > %.0f GeV", profileYaxis[iTrend+6].Data(), widePtBinBorders[iWidePt]));
+      trendLegend->SetHeader(Form("%s error trend for p_{T} > %d GeV", profileYaxis[iTrend+6].Data(), widePtBinBorders[iWidePt]));
       
       for(int iFile = 0; iFile < compareFiles; iFile++){
         gBigTrend[iFile][iTrend][iWidePt]->SetMarkerColor(trendColors[iFile]);
         gBigTrend[iFile][iTrend][iWidePt]->SetMarkerStyle(kFullCircle);
         
         if(iFile == 0){
-          drawer->DrawGraphCustomAxes(gBigTrend[iFile][iTrend][iWidePt], 0, nRuns, 10, 80, "Run index", Form("#LT #sigma(%s) #GT", profileYaxis[iTrend+6].Data()), " ", "ap");
+          drawer->DrawGraphCustomAxes(gBigTrend[iFile][iTrend][iWidePt], 0, nRuns, trendZoomLow[iTrend], trendZoomHigh[iTrend], "Run index", Form("#LT #sigma(%s) #GT", profileYaxis[iTrend+6].Data()), " ", "ap");
         } else {
           gBigTrend[iFile][iTrend][iWidePt]->Draw("p,same");
         }
@@ -474,6 +643,11 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
       } // File loop
       
       trendLegend->Draw();
+      
+      // Save the figures
+      if(saveFigures){
+        gPad->GetCanvas()->SaveAs(Form("figures/%sTrendPtOver%d%s.pdf", trendName[iTrend].Data(), widePtBinBorders[iWidePt], saveComment));
+      }
       
     } // Wide pT loop
   } // Trend type loop
