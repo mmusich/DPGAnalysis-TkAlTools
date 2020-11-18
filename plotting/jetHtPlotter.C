@@ -177,6 +177,59 @@ std::tuple<std::vector<int>, std::vector<double>, std::vector<TString>> getRunAn
 }
 
 /*
+ *  Scale the x-axis of a given graph by integrated luminosity. The error on x-axis represents the luminosity of each run.
+ *
+ *  Arguments:
+ *   TGraphErrors *runGraph = Graph containing dxy or dz error trends as a function of run index
+ *   std::vector<double> lumiPerIov = Vector showing luminosities for each run. Indices must match with the graph
+ *
+ */
+void scaleGraphByLuminosity(TGraphErrors *runGraph, std::vector<double> lumiPerIov) {
+  
+  // Read the number of runs from the graph by run number
+  int nRuns = runGraph->GetN();
+  
+  // Helper variables
+  std::vector<double> xAxisValues, yAxisValues, xAxisErrors, yAxisErrors;
+
+  int iRun = 0;
+  int offset = 0;
+  double lumiFactor = 1000;  // Scale factor value to have luminosity expressed in fb^-1
+  
+  double runIndex, yValue;
+  double xValue = 0;
+  double epsilon = 1e-5;
+  
+  // Loop over all runs, remove zeros and for runs with content, replace x-axis index by luminosity
+  while (iRun < nRuns) {
+    runGraph->GetPoint(iRun, runIndex, yValue);
+
+    if (lumiPerIov.at(iRun+offset) == 0 || yValue < epsilon) {
+      nRuns--;
+      runGraph->RemovePoint(iRun);
+      offset++;
+    } else {
+      
+      xValue += lumiPerIov.at(iRun+offset) / lumiFactor;
+      xAxisValues.push_back(xValue - (lumiPerIov.at(iRun+offset) / (lumiFactor * 2)));
+      xAxisErrors.push_back(lumiPerIov.at(iRun+offset) / (lumiFactor * 2));
+      yAxisValues.push_back(yValue);
+      yAxisErrors.push_back(runGraph->GetErrorY(iRun));
+      
+      iRun++;
+    }
+  } // Loop over all runs in original histogram
+  
+  // Delete remaining old content and replace it with new one calculated from luminosities
+  runGraph->GetHistogram()->Delete();
+  runGraph->SetHistogram(nullptr);
+  for (size_t iRun = 0; iRun < nRuns; iRun++) {
+    runGraph->SetPoint(iRun, xAxisValues.at(iRun), yAxisValues.at(iRun));
+    runGraph->SetPointError(iRun, xAxisErrors.at(iRun), yAxisErrors.at(iRun));
+  }
+}
+
+/*
  * Macro for plotting figures for the study of jet HT sample
  */
 void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root", TString comparisonFileName = "", TString comparisonFileName2 = "", TString comparisonFileName3 = ""){
@@ -215,6 +268,7 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   drawTrend[kDxyErrorTrend] = true;    // Draw the trend plots for dxy errors
   
   bool drawProfilesForEachIOV = false;  // True = Draw profile plots for every IOV. False = only draw average over all runs
+  bool useLuminosityForTrends = true;  // True = Draw trends as a function of luminosity. False = Draw trends as a function of run index
   
   int colors[] = {kRed,kGreen+3,kMagenta,kCyan,kViolet+3,kOrange,kPink-7,kSpring+3,kAzure-7};
   int nIovInOnePlot = 1;  // Define how many iov:s are drawn to the same plot
@@ -228,7 +282,7 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   int widePtBinBorders[nWidePtBins] = {3,5,10,20,50,100};
   
   bool normalizeQAplots = true;
-  bool saveFigures = false;
+  bool saveFigures = true;
   const char *saveComment = "_dataComparison2017";
   
   int compareFiles = 1;
@@ -401,13 +455,12 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
         gBigTrend[iFile][kDzErrorTrend][iWidePt] = new TGraphErrors(nRuns, xValue, yValueDz, xError, yErrorDz);
         gBigTrend[iFile][kDxyErrorTrend][iWidePt] = new TGraphErrors(nRuns, xValue, yValueDxy, xError, yErrorDxy);
         
-        // Make the labels in the x-axis reflect run numbers
-//        for(int iTrend = 0; iTrend < knTrendTypes; iTrend++){
-//          for(int iRun = 0; iRun < nRuns; iRun++){
-//            gBigTrend[iFile][iTrend][iWidePt]->GetXaxis()->SetBinLabel(iRun+1,Form("%d",iovVector.at(iRun)));
-//          } // Run loop
-//          gBigTrend[iFile][iTrend][iWidePt]->GetXaxis()->SetNdivisions(505);
-//        } // Trend loop
+        // Change x-axis to processed luminosity
+        if(useLuminosityForTrends){
+          scaleGraphByLuminosity(gBigTrend[iFile][kDzErrorTrend][iWidePt], lumiPerIov);
+          scaleGraphByLuminosity(gBigTrend[iFile][kDxyErrorTrend][iWidePt], lumiPerIov);
+        }
+        
         
       } // Wide pT bin loop
     } // File loop
@@ -619,6 +672,10 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   TLegend *trendLegend;
   drawer->SetCanvasSize(1000,400);
   double trendColors[] = {kBlack, kBlue, kRed, kGreen+3};
+  
+  TString xTitle = "Run index";
+  if(useLuminosityForTrends) xTitle = "Processed luminosity  (1/fb)";
+  
   for(int iTrend = 0; iTrend < knTrendTypes; iTrend++){
     if(!drawTrend[iTrend]) continue;
     for(int iWidePt = 0; iWidePt < nWidePtBins; iWidePt++){
@@ -633,7 +690,7 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
         gBigTrend[iFile][iTrend][iWidePt]->SetMarkerStyle(kFullCircle);
         
         if(iFile == 0){
-          drawer->DrawGraphCustomAxes(gBigTrend[iFile][iTrend][iWidePt], 0, nRuns, trendZoomLow[iTrend], trendZoomHigh[iTrend], "Run index", Form("#LT #sigma(%s) #GT", profileYaxis[iTrend+6].Data()), " ", "ap");
+          drawer->DrawGraphCustomAxes(gBigTrend[iFile][iTrend][iWidePt], 0, nRuns, trendZoomLow[iTrend], trendZoomHigh[iTrend], xTitle, Form("#LT #sigma(%s) #GT", profileYaxis[iTrend+6].Data()), " ", "ap");
         } else {
           gBigTrend[iFile][iTrend][iWidePt]->Draw("p,same");
         }
