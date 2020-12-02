@@ -182,9 +182,12 @@ std::tuple<std::vector<int>, std::vector<double>, std::vector<TString>> getRunAn
  *  Arguments:
  *   TGraphErrors *runGraph = Graph containing dxy or dz error trends as a function of run index
  *   std::vector<double> lumiPerIov = Vector showing luminosities for each run. Indices must match with the graph
+ *   bool skipMissingRuns = If there is no data for a run in the runlist, do not assign luminosity for it
+ *
+ *  Return: std::vector<double> New luminosity list where skipped runs are set to zero
  *
  */
-void scaleGraphByLuminosity(TGraphErrors *runGraph, std::vector<double> lumiPerIov) {
+std::vector<double> scaleGraphByLuminosity(TGraphErrors *runGraph, std::vector<double> lumiPerIov, bool skipMissingRuns) {
   
   // Read the number of runs from the graph by run number
   int nRuns = runGraph->GetN();
@@ -200,14 +203,19 @@ void scaleGraphByLuminosity(TGraphErrors *runGraph, std::vector<double> lumiPerI
   double xValue = 0;
   double epsilon = 1e-5;
   
+  std::vector<double> lumiPerIovWithSkips;
+  
   // Loop over all runs, remove zeros and for runs with content, replace x-axis index by luminosity
   while (iRun < nRuns) {
     runGraph->GetPoint(iRun, runIndex, yValue);
 
-    if (lumiPerIov.at(iRun+offset) == 0 || yValue < epsilon) {
+    if (lumiPerIov.at(iRun+offset) == 0 || (yValue < epsilon && skipMissingRuns)) {
       nRuns--;
       runGraph->RemovePoint(iRun);
       offset++;
+      
+      // Fill vector where lumi for skipped runs is set to zero
+      lumiPerIovWithSkips.push_back(0);
     } else {
       
       xValue += lumiPerIov.at(iRun+offset) / lumiFactor;
@@ -215,6 +223,9 @@ void scaleGraphByLuminosity(TGraphErrors *runGraph, std::vector<double> lumiPerI
       xAxisErrors.push_back(lumiPerIov.at(iRun+offset) / (lumiFactor * 2));
       yAxisValues.push_back(yValue);
       yAxisErrors.push_back(runGraph->GetErrorY(iRun));
+      
+      // Fill vector where lumi for skipped runs is set to zero
+      lumiPerIovWithSkips.push_back(lumiPerIov.at(iRun+offset));
       
       iRun++;
     }
@@ -227,6 +238,34 @@ void scaleGraphByLuminosity(TGraphErrors *runGraph, std::vector<double> lumiPerI
     runGraph->SetPoint(iRun, xAxisValues.at(iRun), yAxisValues.at(iRun));
     runGraph->SetPointError(iRun, xAxisErrors.at(iRun), yAxisErrors.at(iRun));
   }
+  
+  return lumiPerIovWithSkips;
+}
+
+/*
+ * Get the total luminosity upto a given run
+ *
+ *  std::vector<double> lumiPerIov = Vector containing luminosity information
+ *  std::vector<int> iovVector = Vector containing run information
+ *  in runNumber = Run upto which the luminosity is calculated
+ */
+double getLuminosityBeforeRun(std::vector<double> lumiPerIov, std::vector<int> iovVector, int runNumber) {
+
+  double lumiFactor = 1000;  // Scale factor value to have luminosity expressed in fb^-1
+  
+  int nRuns = lumiPerIov.size();
+  double luminosityBefore = 0;
+  
+  for(int iRun = 0; iRun < nRuns; iRun++){
+    
+    if(runNumber <= iovVector.at(iRun)) return luminosityBefore;
+    
+    luminosityBefore += lumiPerIov.at(iRun) / lumiFactor;
+    
+  }
+  
+  return luminosityBefore;
+  
 }
 
 /*
@@ -269,12 +308,13 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   
   bool drawProfilesForEachIOV = false;  // True = Draw profile plots for every IOV. False = only draw average over all runs
   bool useLuminosityForTrends = true;  // True = Draw trends as a function of luminosity. False = Draw trends as a function of run index
+  bool skipRunsWithNoData = false;      // True = Do not draw empty space if run in list is missing data. False = Draw empty space
   
   int colors[] = {kRed,kGreen+3,kMagenta,kCyan,kViolet+3,kOrange,kPink-7,kSpring+3,kAzure-7};
   int nIovInOnePlot = 1;  // Define how many iov:s are drawn to the same plot
   
-  double profileZoomLow[knProfileTypes] = {32,55,40,10,50,30,25,20};
-  double profileZoomHigh[knProfileTypes] = {62,80,100,40,70,90,90,80};
+  double profileZoomLow[knProfileTypes] = {28,45,30,7,40,20,25,20};
+  double profileZoomHigh[knProfileTypes] = {60,80,95,40,70,90,90,80};
   double trendZoomLow[knTrendTypes] = {20,10};
   double trendZoomHigh[knTrendTypes] = {95,90};
   
@@ -282,8 +322,8 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   int widePtBinBorders[nWidePtBins] = {3,5,10,20,50,100};
   
   bool normalizeQAplots = true;
-  bool saveFigures = true;
-  const char *saveComment = "_dataComparison2017";
+  bool saveFigures = false;
+  const char *saveComment = "_dataMCComparison2017_lowPtHat";
   
   int compareFiles = 1;
   if(!comparisonFileName.EqualTo("")) compareFiles++;
@@ -308,12 +348,18 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   legendComment[0] = "Prompt";
   legendComment[1] = "ReReco";
   legendComment[2] = "UltraLegacy";
-  legendComment[3] = "Prompt + UL APEs";
+  legendComment[3] = "120 < #hat{p}_{T} < 170 GeV";
   
   
   const bool displayIOVinComment = false; // False: The comment is fully given by legend comment. True: IOV/all/central added to comment
   
   TString plotTitle = " ";  // Title given to the plot
+  
+  // Year boundary runs
+  bool drawYearLines = true;         // Draw lines between data taking years
+  const int firstRun2016 = 266150;   // First run of 2016
+  const int firstRun2017 = 290543;   // First run of 2017
+  const int firstRun2018 = 314881;   // First run of 2018
   
   // ======================================================
   // ================ Configuration done ==================
@@ -337,11 +383,12 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   // ===============================================
   
   // Luminosity per run file
-  const char* iovAndLumiFile = "lumiList2017.txt";
+  const char* iovAndLumiFile = "lumiPerRun_Run2.txt";
   
   // Create a vector for a new iovList
   std::vector<int> iovVector;
   std::vector<double> lumiPerIov;
+  std::vector<double> lumiPerIovWithSkips;
   std::vector<TString> iovNames;
   
   std::tie(iovVector, lumiPerIov, iovNames) = getRunAndLumiLists(iovAndLumiFile);
@@ -457,8 +504,8 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
         
         // Change x-axis to processed luminosity
         if(useLuminosityForTrends){
-          scaleGraphByLuminosity(gBigTrend[iFile][kDzErrorTrend][iWidePt], lumiPerIov);
-          scaleGraphByLuminosity(gBigTrend[iFile][kDxyErrorTrend][iWidePt], lumiPerIov);
+          lumiPerIovWithSkips = scaleGraphByLuminosity(gBigTrend[iFile][kDzErrorTrend][iWidePt], lumiPerIov, skipRunsWithNoData);
+          scaleGraphByLuminosity(gBigTrend[iFile][kDxyErrorTrend][iWidePt], lumiPerIov, skipRunsWithNoData);
         }
         
         
@@ -631,7 +678,11 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
       legendSplitter = 2;
       if(compareFiles < legendSplitter) legendSplitter = compareFiles;
       for(int iFile = 0; iFile < legendSplitter; iFile++){
-        legend[iFile] = new TLegend(0.56-0.37*iFile,0.75,0.86-0.37*iFile,0.9);
+        if(legendSplitter < 2){
+          legend[iFile] = new TLegend(0.56,0.75,0.86,0.9);
+        } else {
+          legend[iFile] = new TLegend(0.19+0.37*iFile,0.75,0.49+0.37*iFile,0.9);
+        }
         legend[iFile]->SetFillStyle(0); legend[iFile]->SetBorderSize(0);
         legend[iFile]->SetTextSize(0.05); legend[iFile]->SetTextFont(62);
         if(displayIOVinComment){
@@ -671,10 +722,13 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   // Trend plots
   TLegend *trendLegend;
   drawer->SetCanvasSize(1000,400);
-  double trendColors[] = {kBlack, kBlue, kRed, kGreen+3};
+  double trendColors[] = {kBlue, kRed, kGreen+2, kBlack};
+  double lumiX;
+  TLine *lumiLine2017;
+  TLine *lumiLine2018;
   
   TString xTitle = "Run index";
-  if(useLuminosityForTrends) xTitle = "Processed luminosity  (1/fb)";
+  if(useLuminosityForTrends) xTitle = "Delivered luminosity  (1/fb)";
   
   for(int iTrend = 0; iTrend < knTrendTypes; iTrend++){
     if(!drawTrend[iTrend]) continue;
@@ -700,6 +754,17 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
       } // File loop
       
       trendLegend->Draw();
+      
+      // Draw lines for different data taking year
+      if(drawYearLines){
+        lumiX = getLuminosityBeforeRun(lumiPerIovWithSkips, iovVector, firstRun2017);
+        lumiLine2017 = new TLine(lumiX, trendZoomLow[iTrend], lumiX, trendZoomHigh[iTrend]);
+        lumiLine2017->Draw();
+        
+        lumiX = getLuminosityBeforeRun(lumiPerIovWithSkips, iovVector, firstRun2018);
+        lumiLine2018 = new TLine(lumiX, trendZoomLow[iTrend], lumiX, trendZoomHigh[iTrend]);
+        lumiLine2018->Draw();
+      }
       
       // Save the figures
       if(saveFigures){
