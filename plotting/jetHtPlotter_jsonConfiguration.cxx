@@ -1,19 +1,37 @@
+// C++ includes
+#include <iostream>   // Input/output stream. Needed for cout.
+#include <vector>
+
+// Root includes
+#include <TFile.h>
+#include <TString.h>
+#include <TH1D.h>
+#include <TProfile.h>
+#include <TGraphErrors.h>
+#include <TLegend.h>
+#include <TLine.h>
+
 // Include a drawing helper class
+#include "JetHtPlotConfiguration.h"
 #include "JDrawer.h"
+
+// Maximum number of compared files implemented in current code
+const int kMaxFiles = 4;
 
 /*
  *  Draw a histogram to canvas
  *
  *  Arguments:
- *    TH1D *histogram[2] = Input histogram and comparison histogram
+ *    TH1D *histogram[kMaxFiles] = Input histogram and comparison histogram
  *    const char *saveName = Name given for saved figures
  *    bool saveFigures = True: Save figures to file, False: Do not save figures
- *    TString comment[2] = Text written to legend
+ *    TString comment[kMaxFiles] = Text written to legend
  *    int legendPosition = Position index of legend: 0 = Right top, 1 = Middle bottom
  *    bool normalize = Normalize the distributions to one so that shapes can be compared
  *    bool logScale = Use logarithmic scale for y-axis
+ *    int color[kMaxFiles] = Color used for each files
  */
-void drawSingleHistogram(TH1D *histogram[4], const char *saveName, bool saveFigures, TString comment[4], int legendPosition, bool normalize, bool logScale){
+void drawSingleHistogram(TH1D *histogram[kMaxFiles], const char *saveName, bool saveFigures, TString comment[kMaxFiles], int legendPosition, bool normalize, bool logScale, int color[kMaxFiles]){
   JDrawer *drawer = new JDrawer();
   drawer->SetLogY(logScale);
   double legendX1 = 0.6; double legendY1 = 0.75; double legendX2 = 0.9; double legendY2 = 0.9;
@@ -22,17 +40,16 @@ void drawSingleHistogram(TH1D *histogram[4], const char *saveName, bool saveFigu
   }
   TLegend *legend = new TLegend(legendX1,legendY1,legendX2,legendY2);
   legend->SetFillStyle(0);legend->SetBorderSize(0);legend->SetTextSize(0.05);legend->SetTextFont(62);
-  histogram[0]->SetLineColor(kBlack);
+  histogram[0]->SetLineColor(color[0]);
   if(normalize) histogram[0]->Scale(1.0/histogram[0]->Integral());
   legend->AddEntry(histogram[0],comment[0],"l");
   drawer->DrawHistogram(histogram[0]);
-  int lineColors[] = {kRed, kBlue, kMagenta};
-  for(int i = 1; i < 4; i++){
-    if(histogram[i]){
-      histogram[i]->SetLineColor(lineColors[i-1]);
-      if(normalize) histogram[i]->Scale(1.0/histogram[i]->Integral());
-      histogram[i]->Draw("Same");
-      legend->AddEntry(histogram[i],comment[i],"l");
+  for(int iFile = 1; iFile < kMaxFiles; iFile++){
+    if(histogram[iFile]){
+      histogram[iFile]->SetLineColor(color[iFile]);
+      if(normalize) histogram[iFile]->Scale(1.0/histogram[iFile]->Integral());
+      histogram[iFile]->Draw("Same");
+      legend->AddEntry(histogram[iFile],comment[iFile],"l");
     }
   }
   legend->Draw();
@@ -271,11 +288,15 @@ double getLuminosityBeforeRun(std::vector<double> lumiPerIov, std::vector<int> i
 /*
  * Macro for plotting figures for the study of jet HT sample
  */
-void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root", TString comparisonFileName = "", TString comparisonFileName2 = "", TString comparisonFileName3 = ""){
+void jetHtPlotter(std::string configurationFileName){
 
   // ======================================================
   // ================== Configuration =====================
   // ======================================================
+  
+  JetHtPlotConfiguration *configurationGiver = new JetHtPlotConfiguration();
+  configurationGiver->ReadJsonFile(configurationFileName);
+  configurationGiver->PrintConfiguration();
   
   enum enumHistogramType{kDz, kDzError, kDxy, kDxyError, knHistogramTypes};
   TString histogramName[knHistogramTypes] = {"dz","dzerr","dxy","dxyerr"};
@@ -290,86 +311,88 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   bool drawProfile[knProfileTypes];
   bool drawTrend[knTrendTypes];
   
-  bool drawTrackQA = false;             // Draw track and vertex QA figures
-  drawHistogram[kDz] = false;           // Draw the dz histograms
-  drawHistogram[kDzError] = false;      // Draw the dz error histograms
-  drawProfile[kDzErrorVsPt] = true;    // Draw mean dz error as a function of pT
-  drawProfile[kDzErrorVsPhi] = true;   // Draw mean dz error as a function of phi
-  drawProfile[kDzErrorVsEta] = true;   // Draw mean dz error as a function of eta
-  drawProfile[kDzErrorVsPtWide] = false;   // Draw mean dz error in wide pT bins
-  drawHistogram[kDxy] = false;          // Draw the dxy histograms
-  drawHistogram[kDxyError] = false;     // Draw the dxy error histograms
-  drawProfile[kDxyErrorVsPt] = true;   // Draw the dxy error as a function of pT
-  drawProfile[kDxyErrorVsPhi] = true;  // Draw the dxy error as a function of phi
-  drawProfile[kDxyErrorVsEta] = true;  // Draw the dxy error as a function of eta
-  drawProfile[kDxyErrorVsPtWide] = false;   // Draw mean dxy error in wide pT bins
-  drawTrend[kDzErrorTrend] = false;     // Draw the trend plots for dz errors
-  drawTrend[kDxyErrorTrend] = false;    // Draw the trend plots for dxy errors
+  bool drawTrackQA = configurationGiver->GetDrawTrackQA();                                // Draw track and vertex QA figures
+  drawHistogram[kDz] = configurationGiver->GetDrawHistogram(kDz);                         // Draw the dz histograms
+  drawHistogram[kDzError] = configurationGiver->GetDrawHistogram(kDzError);               // Draw the dz error histograms
+  drawProfile[kDzErrorVsPt] = configurationGiver->GetDrawProfile(kDzErrorVsPt);           // Draw mean dz error as a function of pT
+  drawProfile[kDzErrorVsPhi] = configurationGiver->GetDrawProfile(kDzErrorVsPhi);         // Draw mean dz error as a function of phi
+  drawProfile[kDzErrorVsEta] = configurationGiver->GetDrawProfile(kDzErrorVsEta);         // Draw mean dz error as a function of eta
+  drawProfile[kDzErrorVsPtWide] = configurationGiver->GetDrawProfile(kDzErrorVsPtWide);   // Draw mean dz error in wide pT bins
+  drawHistogram[kDxy] = configurationGiver->GetDrawHistogram(kDxy);                       // Draw the dxy histograms
+  drawHistogram[kDxyError] = configurationGiver->GetDrawHistogram(kDxyError);             // Draw the dxy error histograms
+  drawProfile[kDxyErrorVsPt] = configurationGiver->GetDrawProfile(kDxyErrorVsPt);         // Draw the dxy error as a function of pT
+  drawProfile[kDxyErrorVsPhi] = configurationGiver->GetDrawProfile(kDxyErrorVsPhi);       // Draw the dxy error as a function of phi
+  drawProfile[kDxyErrorVsEta] = configurationGiver->GetDrawProfile(kDxyErrorVsEta);       // Draw the dxy error as a function of eta
+  drawProfile[kDxyErrorVsPtWide] = configurationGiver->GetDrawProfile(kDxyErrorVsPtWide); // Draw mean dxy error in wide pT bins
+  drawTrend[kDzErrorTrend] = configurationGiver->GetDrawTrend(kDzErrorTrend);             // Draw the trend plots for dz errors
+  drawTrend[kDxyErrorTrend] = configurationGiver->GetDrawTrend(kDxyErrorTrend);           // Draw the trend plots for dxy errors
   
-  bool drawProfilesForEachIOV = false;  // True = Draw profile plots for every IOV. False = only draw average over all runs
-  bool useLuminosityForTrends = true;  // True = Draw trends as a function of luminosity. False = Draw trends as a function of run index
-  bool skipRunsWithNoData = false;      // True = Do not draw empty space if run in list is missing data. False = Draw empty space
+  bool drawPlotsForEachIOV = configurationGiver->GetDrawPlotsForEachIOV();        // True = Draw profile and histogram plots for every IOV. False = only draw average over all runs
+  bool useLuminosityForTrends = configurationGiver->GetUseLuminosityForTrends();  // True = Draw trends as a function of luminosity. False = Draw trends as a function of run index
+  bool skipRunsWithNoData = configurationGiver->GetSkipRunsWithNoData();          // True = Do not draw empty space if run in list is missing data. False = Draw empty space
   
   int colors[] = {kRed,kGreen+3,kMagenta,kCyan,kViolet+3,kOrange,kPink-7,kSpring+3,kAzure-7};
-  int nIovInOnePlot = 1;  // Define how many iov:s are drawn to the same plot
+  int nIovInOnePlot = configurationGiver->GetNIovInOnePlot();  // Define how many iov:s are drawn to the same plot
   
-  double profileZoomLow[knProfileTypes] = {28,45,30,7,40,20,25,20};
-  double profileZoomHigh[knProfileTypes] = {60,80,95,40,70,90,90,80};
-  double trendZoomLow[knTrendTypes] = {20,10};
-  double trendZoomHigh[knTrendTypes] = {95,90};
+  double profileZoomLow[knProfileTypes];
+  double profileZoomHigh[knProfileTypes];
+  double trendZoomLow[knTrendTypes];
+  double trendZoomHigh[knTrendTypes];
+  
+  for(int iProfile = 0; iProfile < knProfileTypes; iProfile++){
+    profileZoomLow[iProfile] = configurationGiver->GetProfileZoomLow(iProfile);
+    profileZoomHigh[iProfile] = configurationGiver->GetProfileZoomHigh(iProfile);
+  }
+  for(int iTrend = 0; iTrend < knTrendTypes; iTrend++){
+    trendZoomLow[iTrend] = configurationGiver->GetTrendZoomLow(iTrend);
+    trendZoomHigh[iTrend] = configurationGiver->GetTrendZoomHigh(iTrend);
+  }
   
   const int nWidePtBins = 6;
   int widePtBinBorders[nWidePtBins] = {3,5,10,20,50,100};
   
-  bool normalizeQAplots = true;
-  bool saveFigures = false;
-  const char *saveComment = "_fullTrends";
+  bool normalizeQAplots = configurationGiver->GetNormalizeQAplots();  // Divide in QA plot yield by its integral
+  bool saveFigures = true;
+  const char *saveComment = configurationGiver->GetSaveComment();
   
-  bool loadFromList[4] = {false, false, false, false};
-  const char* inputFileNames[4] = {inputFileName, comparisonFileName, comparisonFileName2, comparisonFileName3};
+  int compareFiles = configurationGiver->GetNInputFiles();
+  if(compareFiles == 0) return; // Cannot do plotting without files!
+  if(compareFiles > kMaxFiles) compareFiles = kMaxFiles;  // Four is maximum number of files in current implementation
   
-  int compareFiles = 1;
-  if(!comparisonFileName.EqualTo("")) compareFiles++;
-  if(!comparisonFileName2.EqualTo("")) compareFiles++;
-  if(!comparisonFileName3.EqualTo("")) compareFiles++;
+  // Read the input file names. If file names end with .txt, they are assumed to be lists of files in different ptHat bins
+  TString inputFileName[kMaxFiles];
+  bool loadFromList[kMaxFiles] = {false, false, false, false};
+  TString legendComment[kMaxFiles];
+  int fileColor[kMaxFiles];
+  int fileMarker[kMaxFiles];
   
-  if(inputFileName.EndsWith("txt")) loadFromList[0] = true;
-  if(comparisonFileName.EndsWith("txt")) loadFromList[1] = true;
-  if(comparisonFileName2.EndsWith("txt")) loadFromList[2] = true;
-  if(comparisonFileName3.EndsWith("txt")) loadFromList[3] = true;
-  
+  for(int iFile = 0; iFile < kMaxFiles; iFile++){
+    inputFileName[iFile] = configurationGiver->GetInputFile(iFile);
+    if(inputFileName[iFile].EndsWith("txt")) loadFromList[iFile] = true;
+    legendComment[iFile] = configurationGiver->GetLegendComment(iFile); // Text written to the legend for each file
+    fileColor[iFile] = configurationGiver->GetMarkerColor(iFile);       // Color of markers related to this file
+    fileMarker[iFile] = configurationGiver->GetMarkerStyle(iFile);      // Style for markers related to this file
+  }
   
   // Prepare an IOV list that can be used with the slide generation script
-  bool makeIovListForSlides = false;
-  const char *iovListForSlides = "iovListForSlides.txt";
+  bool makeIovListForSlides = configurationGiver->GetMakeIovListForSlides();
+  const char *iovListForSlides = configurationGiver->GetIovListForSlides();
   
   // Helper variable to ensure that each IOV is added exactly once to the list
   int profileIndexForIovList = 0;
-  for(int iProfileType = 0; iProfileType < knProfileTypes; iProfileType++){
-    if(drawProfile[iProfileType]){
-      profileIndexForIovList = iProfileType;
+  for(int iProfile = 0; iProfile < knProfileTypes; iProfile++){
+    if(drawProfile[iProfile]){
+      profileIndexForIovList = iProfile;
       break;
     }
   }
   
-  // Text written to the legend for each file
-  TString legendComment[4];
-  legendComment[0] = "Prompt";
-  legendComment[1] = "ReReco";
-  legendComment[2] = "UltraLegacy";
-  legendComment[3] = "MC PFHT370 weight";
-  
-  
-  const bool displayIOVinComment = false; // False: The comment is fully given by legend comment. True: IOV/all/central added to comment
-  
   TString plotTitle = " ";  // Title given to the plot
   
   // Year boundary runs
-  bool drawYearLines = true;         // Draw lines between data taking years
-  const int firstRun2016 = 266150;   // First run of 2016
-  const int firstRun2017 = 290543;   // First run of 2017
-  const int firstRun2018 = 314881;   // First run of 2018
-  
+  bool drawYearLines = configurationGiver->GetDrawYearLines();           // Draw lines between data taking years
+  std::vector<int> linePosition = configurationGiver->GetRunsForLines(); // Positions of the above lines
+
   // ======================================================
   // ================ Configuration done ==================
   // ======================================================
@@ -377,15 +400,15 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   // ===============================================================
   //   Read different ptHat files for combining those with weights
   // ===============================================================
-
-  // List for all the different ptHat files to be combined
-  std::vector<std::string> ptHatFileNameList[4];
-  std::vector<TFile*> ptHatFileList[4];
-  std::vector<int> ptHatList[4];
   
-  for(int iInput = 0; iInput < 4; iInput++){
+  // List for all the different ptHat files to be combined
+  std::vector<std::string> ptHatFileNameList[kMaxFiles];
+  std::vector<TFile*> ptHatFileList[kMaxFiles];
+  std::vector<int> ptHatList[kMaxFiles];
+  
+  for(int iInput = 0; iInput < kMaxFiles; iInput++){
     if(loadFromList[iInput]){
-      std::tie(ptHatFileNameList[iInput], ptHatList[iInput]) = getPtHatFilesAndValues(inputFileNames[iInput]);
+      std::tie(ptHatFileNameList[iInput], ptHatList[iInput]) = getPtHatFilesAndValues(inputFileName[iInput]);
       
       // Open all files
       for(int iFile = 0; iFile < ptHatFileNameList[iInput].size(); iFile++){
@@ -394,13 +417,12 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
     }
   }
   
-  
   // ===============================================
   //        Read the run and luminosity list
   // ===============================================
   
   // Luminosity per run file
-  const char* iovAndLumiFile = "lumiPerRun_Run2.txt";
+  const char* iovAndLumiFile = configurationGiver->GetLumiPerIovFile();
   
   // Create a vector for a new iovList
   std::vector<int> iovVector;
@@ -423,26 +445,25 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   // ===============================================
   
   // Open the input files
-  TFile *inputFile[4];
-  inputFile[0] = TFile::Open(inputFileName);
-  if(compareFiles > 1 && !loadFromList[1]) inputFile[1] = TFile::Open(comparisonFileName);
-  if(compareFiles > 2 && !loadFromList[2]) inputFile[2] = TFile::Open(comparisonFileName2);
-  if(compareFiles > 3 && !loadFromList[3]) inputFile[3] = TFile::Open(comparisonFileName3);
+  TFile *inputFile[kMaxFiles];
+  for(int iFile = 0; iFile < kMaxFiles; iFile++){
+    if(compareFiles > iFile && !loadFromList[iFile]) inputFile[iFile] = TFile::Open(inputFileName[iFile]);
+  }
   
   // Define the histograms that will be read from the file
   const int nIov = iovNames.size();
-  TH1D *hVertex[4];
-  TH1D *hTracksPerVertex[4];
-  TH1D *hTrackPt[4];
-  TH1D *hTrackEta[4];
-  TH1D *hTrackPhi[4];
-  TH1D *jetHtHistograms[4][knHistogramTypes][nIov];
-  TProfile *jetHtProfiles[4][knProfileTypes][nIov];
-  TGraphErrors *gBigTrend[4][knTrendTypes][nWidePtBins];
+  TH1D *hVertex[kMaxFiles];
+  TH1D *hTracksPerVertex[kMaxFiles];
+  TH1D *hTrackPt[kMaxFiles];
+  TH1D *hTrackEta[kMaxFiles];
+  TH1D *hTrackPhi[kMaxFiles];
+  TH1D *jetHtHistograms[kMaxFiles][knHistogramTypes][nIov];
+  TProfile *jetHtProfiles[kMaxFiles][knProfileTypes][nIov];
+  TGraphErrors *gBigTrend[kMaxFiles][knTrendTypes][nWidePtBins];
   int legendSplitter = 0;
   
   // Initialize everything to NULL
-  for(int iFile = 0; iFile < 4; iFile++){
+  for(int iFile = 0; iFile < kMaxFiles; iFile++){
     hVertex[iFile] = NULL;
     hTracksPerVertex[iFile] = NULL;
     hTrackPt[iFile] = NULL;
@@ -469,6 +490,7 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
     if(loadFromList[iFile]){
       
       // Alternative loading for ptHat combined values
+      
       hVertex[iFile] = (TH1D*) getPtHatCombinedHistogram(ptHatFileList[iFile],ptHatList[iFile],"jetHTAnalyzer/all_nvtx");
       hTracksPerVertex[iFile] = (TH1D*) getPtHatCombinedHistogram(ptHatFileList[iFile],ptHatList[iFile],"jetHTAnalyzer/h_ntrks");
       hTrackPt[iFile] = (TH1D*) getPtHatCombinedHistogram(ptHatFileList[iFile],ptHatList[iFile],"jetHTAnalyzer/h_probePt");
@@ -508,8 +530,7 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
           } // if for drawing profile
         } // profile type loop
       } // iov loop for reading histograms from file
-    }
-    
+    } // Regular histogram loading
   } // Loop over files
   
   // Collect the information for the trend graphs
@@ -567,15 +588,16 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   
   // Draw track and vertex histograms
   if(drawTrackQA){
-    drawSingleHistogram(hVertex,Form("vertex%s",saveComment),saveFigures,legendComment,0,normalizeQAplots,false);
-    drawSingleHistogram(hTracksPerVertex,Form("tracksPerVertex%s",saveComment),saveFigures,legendComment,0,normalizeQAplots,false);
-    drawSingleHistogram(hTrackPt,Form("trackPt%s",saveComment),saveFigures,legendComment,0,normalizeQAplots,true);
-    drawSingleHistogram(hTrackEta,Form("trackEta%s",saveComment),saveFigures,legendComment,1,normalizeQAplots,false);
-    drawSingleHistogram(hTrackPhi,Form("trackPhi%s",saveComment),saveFigures,legendComment,1,normalizeQAplots,false);
+    drawSingleHistogram(hVertex, Form("vertex%s",saveComment), saveFigures, legendComment, 0, normalizeQAplots, false, fileColor);
+    drawSingleHistogram(hTracksPerVertex, Form("tracksPerVertex%s",saveComment), saveFigures, legendComment, 0, normalizeQAplots, false, fileColor);
+    drawSingleHistogram(hTrackPt, Form("trackPt%s",saveComment), saveFigures, legendComment, 0, normalizeQAplots, true, fileColor);
+    drawSingleHistogram(hTrackEta, Form("trackEta%s",saveComment), saveFigures, legendComment, 1, normalizeQAplots, false, fileColor);
+    drawSingleHistogram(hTrackPhi, Form("trackPhi%s",saveComment), saveFigures, legendComment, 1, normalizeQAplots, false, fileColor);
   }
   
   // Draw dz and dxy histograms
   for(int iIov= 0; iIov < nIov; iIov++){
+    if(!drawPlotsForEachIOV && iIov < nIov-2) continue;
     for(int iHistogramType = 0; iHistogramType < knHistogramTypes; iHistogramType++){
       if(drawHistogram[iHistogramType]){
         
@@ -614,18 +636,17 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
     if(drawProfile[iProfileType]){
       
       // Set the style for IOV integrated histograms
-      jetHtProfiles[0][iProfileType][nIov-2]->SetLineColor(kBlue);
+      jetHtProfiles[0][iProfileType][nIov-2]->SetLineColor(fileColor[0]);
       jetHtProfiles[0][iProfileType][nIov-2]->SetLineWidth(2);
       jetHtProfiles[0][iProfileType][nIov-2]->GetYaxis()->SetRangeUser(profileZoomLow[iProfileType], profileZoomHigh[iProfileType]);
       
       for(int iFile = 1; iFile < compareFiles; iFile++){
-        jetHtProfiles[iFile][iProfileType][nIov-2]->SetLineColor(colors[iFile-1]);
-        if(compareFiles == 2) jetHtProfiles[iFile][iProfileType][nIov-2]->SetLineColor(kCyan);  // Preserve coloring scheme for 2 file comparison
+        jetHtProfiles[iFile][iProfileType][nIov-2]->SetLineColor(fileColor[iFile]);
         jetHtProfiles[iFile][iProfileType][nIov-2]->SetLineWidth(2);
       }
       
       // NOTE: IOV drawing only works for one or two files! Using more files will not give good results!!!
-      if(drawProfilesForEachIOV){
+      if(drawPlotsForEachIOV){
         for(int iIov= 0; iIov < nIov-2; iIov = iIov + nIovInOnePlot){
           
           noIovFound = true;
@@ -729,7 +750,7 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
         }
         legend[iFile]->SetFillStyle(0); legend[iFile]->SetBorderSize(0);
         legend[iFile]->SetTextSize(0.05); legend[iFile]->SetTextFont(62);
-        if(displayIOVinComment){
+        if(drawPlotsForEachIOV){
           commentEntry = Form("All (%s)",legendComment[iFile].Data());
         } else {
           commentEntry = legendComment[iFile];
@@ -740,7 +761,7 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
       
       if(compareFiles > 2){
         for(int iFile = 2; iFile < compareFiles; iFile++){
-          if(displayIOVinComment){
+          if(drawPlotsForEachIOV){
             commentEntry = Form("All (%s)",legendComment[iFile].Data());
           } else {
             commentEntry = legendComment[iFile];
@@ -770,10 +791,8 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
   drawer->SetRightMargin(0.03);
   drawer->SetTitleOffsetY(0.55);
   drawer->SetLabelOffsetY(0.007);
-  double trendColors[] = {kBlue, kRed, kGreen+2, kBlack};
   double lumiX;
-  TLine *lumiLine2017;
-  TLine *lumiLine2018;
+  TLine *lumiLine;
   
   TString xTitle = "Run index";
   if(useLuminosityForTrends) xTitle = "Delivered luminosity  (1/fb)";
@@ -788,8 +807,8 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
       trendLegend->SetHeader(Form("%s error trend for p_{T} > %d GeV", profileYaxis[iTrend+6].Data(), widePtBinBorders[iWidePt]));
       
       for(int iFile = 0; iFile < compareFiles; iFile++){
-        gBigTrend[iFile][iTrend][iWidePt]->SetMarkerColor(trendColors[iFile]);
-        gBigTrend[iFile][iTrend][iWidePt]->SetMarkerStyle(kFullCircle);
+        gBigTrend[iFile][iTrend][iWidePt]->SetMarkerColor(fileColor[iFile]);
+        gBigTrend[iFile][iTrend][iWidePt]->SetMarkerStyle(fileMarker[iFile]);
         
         if(iFile == 0){
           drawer->DrawGraphCustomAxes(gBigTrend[iFile][iTrend][iWidePt], 0, nRuns, trendZoomLow[iTrend], trendZoomHigh[iTrend], xTitle, Form("#LT #sigma(%s) #GT", profileYaxis[iTrend+6].Data()), " ", "ap");
@@ -805,13 +824,15 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
       
       // Draw lines for different data taking year
       if(drawYearLines){
-        lumiX = getLuminosityBeforeRun(lumiPerIovWithSkips, iovVector, firstRun2017);
-        lumiLine2017 = new TLine(lumiX, trendZoomLow[iTrend], lumiX, trendZoomHigh[iTrend]);
-        lumiLine2017->Draw();
         
-        lumiX = getLuminosityBeforeRun(lumiPerIovWithSkips, iovVector, firstRun2018);
-        lumiLine2018 = new TLine(lumiX, trendZoomLow[iTrend], lumiX, trendZoomHigh[iTrend]);
-        lumiLine2018->Draw();
+        for(int thisRun : linePosition){
+          
+          lumiX = getLuminosityBeforeRun(lumiPerIovWithSkips, iovVector, thisRun);
+          lumiLine = new TLine(lumiX, trendZoomLow[iTrend], lumiX, trendZoomHigh[iTrend]);
+          lumiLine->Draw();
+          
+        }
+        
       }
       
       // Save the figures
@@ -822,4 +843,28 @@ void jetHtPlotter(TString inputFileName = "data/jetHtAnalysis_partMissing.root",
     } // Wide pT loop
   } // Trend type loop
   
+}
+
+/*
+ * Main program
+ */
+int main(int argc, char **argv){
+  
+  //==== Read arguments =====
+  if ( argc<1 ) {
+    cout<<"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"<<endl;
+    cout<<"+ Usage of the macro: " << endl;
+    cout<<"+  "<<argv[0]<<" <configurationFile>"<<endl;
+    cout<<"+  configurationFile: Optional. JSON file from which the configuration is read. Default = jetHtPlotConfiguration.json" <<endl;
+    cout<<"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"<<endl;
+    cout << endl << endl;
+    exit(1);
+  }
+  
+  // If there is more than one argument given, use the first one as the configuration file
+  std::string configurationFile = "jetHtPlotConfiguration.json";
+  if(argc >= 2) configurationFile = argv[1];
+  
+  // Run the program
+  jetHtPlotter(configurationFile);
 }
